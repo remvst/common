@@ -24,6 +24,12 @@ Here are some features that are supported:
 The whole framework is highly inspired by Symfony, while staying a lot 
 simpler and less powerful.
 
+Live examples
+======
+
+As I designed this framework for my specific needs, I use it every day
+for my games, which you can find at http://games.remvst.com/
+
 Install
 ======
 
