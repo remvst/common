@@ -1,11 +1,11 @@
 <?php
+namespace common\Engine;
+ 
 /**
  * Request class
  * Represents any request sent by the client.
  * All paths are relative to the application's root directory.
  */
-namespace common\Engine;
- 
 class Request{
 	private $params;
 	private $postParams;

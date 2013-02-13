@@ -1,4 +1,6 @@
 <?php
+namespace common\Util;
+
 /**
  * Mobile Detect
  * $Id: Mobile_Detect.php 49 2012-06-06 20:46:30Z serbanghita@gmail.com $
@@ -12,7 +14,6 @@
  * 
  * @license    http://www.opensource.org/licenses/mit-license.php The MIT License
  */
-namespace common\Util;
 class Mobile_Detect {
     
     protected $detectionRules;

@@ -1,9 +1,17 @@
 <?php
 namespace common\Util;
+
+/**
+ * Decoder is simply used to encode Ajax queries.
+ * The encoding is not flawless, but it should 
+ * prevent most users from trying to send wrong
+ * data.
+ */
 class Decoder{
     /**
-     * Décryptage des paramètres reçus en URL
-     * La clé est contenue dans le premier octet reçu.
+     * Decoding the received parameter string.
+	 * @param $chaine The encoded string.
+	 * @return The decoded string.
      */
     public static function decode($chaine){
     	$chaineDecodee = $chaine;
@@ -28,7 +36,9 @@ class Decoder{
     }
     
     /**
-     * Parsage : conversion des paramètres en tableau associatif
+     * Converts the decoded string to an array.
+	 * @param $chaine The string to parse.
+	 * @return The array of parameters.
      */
     public static function parse($chaine){
         $res = array();

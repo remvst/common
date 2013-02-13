@@ -44,8 +44,9 @@ several folders:
 
 The apps folder will store your application-specific code. Each 
 application will need a strict folder hierarchy.
+
 For instance, if you wish to create a new application called MyWebsite,
-you could start with this filder hierarchy:
+you could start with this folder hierarchy:
 
 * apps/
 	* MyWebsite/
@@ -59,8 +60,13 @@ you could start with this filder hierarchy:
 				* config.ini
 				* config-dev.ini
 				* config-prod.ini
-			* views
-		* MyWebsiteApplication
+			* views/
+		* MyWebsiteApplication.php
 
-Only the Resource folder has to strictly respect this hierarchy. The 
-other folders can change, as far as the classes' namespaces match.
+Once you have this file hierarchy, with empty classes, you can start
+your application by including the includes.php file, and use the 
+init_app() function.
+
+I would highly recommend that you carefully read the Application,
+Controller and Router classes to better understand how the whole 
+system works.

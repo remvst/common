@@ -1,9 +1,14 @@
 <?php
-/**
- * Abstract class for controllers
- */
 namespace common\Engine;
  
+/**
+ * Abstract class for controllers.
+ * The controller is the intermediate between data and views. The controller
+ * retrieves the data, and then renders the view with the data.
+ * The controller is composed of several methods with the same kind of name.
+ * For example, if you have a home page, you should define the homeAction()
+ * in your controller.
+ */
 abstract class Controller{
 	private $application;
 	
@@ -172,13 +177,16 @@ abstract class Controller{
 	
 	/**
 	 * Gets the action to perform after authentication actions.
+	 * @return The action to perform.
 	 */
 	public function getAuthenticationRedirectAction(){
 		throw new \common\Exception\HttpException(500,'No authentication redirect action defined.');
 	}
 	
 	/**
-	 * Performs the specified action.
+	 * Performs the specified action, after checking if 
+	 * the right permissions were matched.
+	 * @return The result of the action.
 	 */
 	public final function perform($action){
 		$method_name = $action.'Action';
@@ -209,11 +217,22 @@ abstract class Controller{
 	
 	/**
 	 * Returns an array with the permissions for each action.
+	 * You should redefine this method if you wish to have a 
+	 * permission system.
+	 * You can specify any permission you want for any action.
+	 * @return An array with actions as keys, and arrays of permissions as values.
 	 */
 	public function getPermissions(){
 		return array();
 	}
 	
+	/**
+	 * Generates a URL for the specified route. This is only a
+	 * shortcut to Router::generateUrl().
+	 * @param $route The route name.
+	 * @param $params The route parameters.
+	 * @return The generated URL.
+	 */
 	public function generateUrl($route,$params = array()){
 		return $this->application->getRouter()->generateUrl($route,$params);
 	}

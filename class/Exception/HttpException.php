@@ -1,8 +1,9 @@
 <?php
-/**
- * Exception for common HTTP errors (404...)
- */
 namespace common\Exception;
+
+/**
+ * Exception for common HTTP errors (404...).
+ */
 class HttpException extends \Exception{
 	private $errorCode;
 

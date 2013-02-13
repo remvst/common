@@ -5,8 +5,8 @@ namespace common\Engine;
  * The Router class is used to determine which action of the Controller
  * should be used for the requested path.
  * There should be one Router for each Application. If there is a need
- * for several types of Router, Application::getRouter() should be
- * redefined.
+ * for several types of Router, Application::makeRouter() should be
+ * overridden.
  * Each Router should be named as <ApplicationName>Router.
  * Basically, all you have to do is to override the getRoutes() method,
  * which should return all application routes. The getRoute() method 
@@ -40,6 +40,7 @@ abstract class Router{
 	 * redefine this method in your subclass.
 	 * Returns an array with the action and the controller to use.
 	 * @param $request The Request object.
+	 * @return The array representing the route, with at least two keys: controller, and action.
 	 */
 	public function getRoute($request){
 		if($this->route === null){
@@ -69,6 +70,7 @@ abstract class Router{
 	 * and stores if the the $urlParams array.
 	 * @param $pattern The pattern to check, without the initial slash.
 	 * @param $path The path to check, without the initial slash.
+	 * @return true if the pattern matches.
 	 */
 	public function checkPathMatch($pattern,$path){
 		$regexPattern = str_replace('*','(.*)',$pattern);
@@ -124,6 +126,8 @@ abstract class Router{
 	/**
 	 * Gets the routes to use. Each route specifies a pattern, an action,
 	 * and a controller.
+	 * This method should be redefined for each Router.
+	 * @return An array of routes. The keys are the route names, and the values are arrays with 3 parameters : pattern, controller and action.
 	 */
 	public function getRoutes(){
 		return null;
@@ -135,6 +139,7 @@ abstract class Router{
 	 * method.
 	 * @param $routeName The name of the route.
 	 * @param $params The parameters of the route.
+	 * @return The generated URL.
 	 */
 	public function generateUrl($routeName,$params = array()){
 		if(!isset($this->routes[$routeName])){

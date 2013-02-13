@@ -4,6 +4,10 @@ namespace common\Engine;
 use \common\Data\DB as DB;
 use \common\Engine\Application as Application;
 
+/**
+ * Class representing the response that will be sent
+ * to the client.
+ */
 class Response{
 	private $content;
 	private $headers;

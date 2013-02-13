@@ -1,16 +1,19 @@
 <?php
-/**
- * 
- */
 namespace common\Engine;
  
+/**
+ * IniConfiguration creates a new configuration based on
+ * a .ini file.
+ */
 class IniConfiguration{
 	private $file;
 	private $content;
 	private $values;
 	
 	/**
-	 * 
+	 * Creates a new configuration. If a file is specified,
+	 * the file is parsed.
+	 * @param $file The file to read.
 	 */
 	public function __construct($file = null){
 		$this->values = array();
@@ -40,6 +43,8 @@ class IniConfiguration{
 	/**
 	 * Getting a value. If the value doesn't exist, null is returned
 	 * instead.
+	 * @param $key The parameter name.
+	 * @return The parameter if set, null otherwise.
 	 */
 	public function getValue($key){
 		return isset($this->values[$key]) ? $this->values[$key] : null;
@@ -47,13 +52,18 @@ class IniConfiguration{
 	
 	/**
 	 * Setting a value for the specified key.
+	 * @param $key The parameter name.
+	 * @param $value The value to set.
 	 */
 	public function setValue($key,$value){
 		$this->values[$key] = $value;
 	}
 	
 	/**
-	 * Fusing with another IniParser object.
+	 * Fusing with another IniConfiguration object.
+	 * This basically adds the other configuration's content
+	 * to the current one.
+	 * @param otherFile The configuration file to use.
 	 */
 	public function fuse(IniConfiguration $otherFile){
 		foreach($otherFile->values as $key=>$val){
@@ -67,6 +77,8 @@ class IniConfiguration{
 	 * on the environment.
 	 * If one of the files doesn't exist, the function does not throw any
 	 * Exception.
+	 * @param $dir The directory to build.
+	 * @return The resulting IniConfiguration object.
 	 */
 	public static function buildDirectory($dir){
 		$files = array($dir.'/config.ini');
