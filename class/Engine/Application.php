@@ -1,13 +1,37 @@
 <?php
-/**
- * Application : main class for any website.
- * Then create both of these classes which should inherit from Router and 
- * Controller.
- */
 namespace common\Engine;
 
 use \Exception as Exception;
 
+/**
+ * Application : main class for any website.
+ * Basically, each website is represented by its own application.
+ * For instance, if you wish to create a new website called "MyWebsite",
+ * you should create the MyWebsiteApplication in the apps/MyWebsite folder.
+ * Then you should create the following folders and classes :
+ * - Controller/
+ *   - MyWebsiteController.php
+ * - Routing/
+ *   - MyWebsiteRouter.php
+ * - Data/
+ * - Resource/
+ *   - config/
+ *   - view/
+ *   - sql/ (optional)
+ * 
+ * The application basically does this:
+ * - instanciates the application's Router to find which router should
+ *   be used. Each route has its own pattern, and two parameters: the 
+ *   controller's name, and the action to perform.
+ * - once a route has been found, the controller performs the action/ 
+ * - eventually, the application renders the result.
+ * 
+ * Therefore, the Application is the center of every website.
+ * 
+ * When you create your application, you should not have to override
+ * any method. All you will need is then to create a new Router, and
+ * at least a default Controller.
+ */
 abstract class Application{
 	
 	private static $runningApplication = null;
@@ -346,6 +370,12 @@ abstract class Application{
 		return new $class($this);
 	}
 	
+	/**
+	 * Gets the application router.
+	 * If you need to change the way the controller is created, you should
+	 * override the makeRouter() method.
+	 * @return The router.
+	 */
 	public function getRouter(){
 		if($this->router === null){
 			$this->router = $this->makeRouter();
@@ -355,6 +385,8 @@ abstract class Application{
 	
 	/**
 	 * Getting the application controller.
+	 * @param $name The controller's name. For instance, if Example, ExampleController will be loaded.
+	 * @return The controller.
 	 */
 	private function getController($name = null){
 		if($name == null){
@@ -367,6 +399,8 @@ abstract class Application{
 	
 	/**
 	 * Making a crash report : adds a line to the admin application log.
+	 * @param $ex The exception to log.
+	 * @param $action The action during which the error occured.
 	 */
 	protected function reportCrash(\Exception $ex,$action){
 		// Creating report folder if needed
@@ -400,6 +434,9 @@ abstract class Application{
 	
 	/**
 	 * Gets the authentication manager for the application.
+	 * If you need to use an authentication manager, you 
+	 * should override the makeAuthenticationManager method.
+	 * @return The AuthenticationManager object.
 	 */
 	public final function getAuthenticationManager(){
 		if($this->authManager === null){
@@ -411,6 +448,7 @@ abstract class Application{
 	
 	/**
 	 * Creates the authentication manager to use for the application and returns it.
+	 * @return The AuthenticationManager.
 	 */
 	public function makeAuthenticationManager(){
 		throw new \common\Exception\HttpException(500,'Authentication manager is not defined.');
@@ -418,6 +456,7 @@ abstract class Application{
 	
 	/**
 	 * Gets the user's identity.
+	 * If there is no authentication manager for the application, null is returned.
 	 */
 	public function getIdentity(){
 		if($this->identity === null){
@@ -429,18 +468,34 @@ abstract class Application{
 		return $this->identity;
 	}
 	
+	/**
+	 * Getting the path to the folder containing resources.
+	 * @return The folder's path.
+	 */
 	public function getResourceFolder(){
 		return $this->getFolder() . '/Resource';
 	}
 	
+	/**
+	 * Getting the folder containing views (templates).
+	 * @return The folder's path.
+	 */
 	public function getViewFolder(){
 		return $this->getResourceFolder() . '/view';
 	}
 	
+	/**
+	 * Getting the folder containing configuration files.
+	 * @return The folder's path.
+	 */
 	public function getConfigFolder(){
 		return $this->getResourceFolder() . '/config';
 	}
 	
+	/**
+	 * Getting the folder containing .sql files.
+	 * @return The folder's path.
+	 */
 	public function getSqlFolder(){
 		return $this->getResourceFolder() . '/sql';
 	}
@@ -466,18 +521,37 @@ abstract class Application{
 		';
 	}
 	
+	/**
+	 * Getting the application's namespace.
+	 * @return The namespace's string.
+	 */
 	public function getNamespace(){
 		return str_replace('\\' . $this->name . 'Application','',get_class($this));
 	}
 	
+	/**
+	 * Checking if the application is in debug mode. Debug mode
+	 * should only be used for the development process. However,
+	 * you can enable it by overriding this method.
+	 * @return true if debug mode is enabled.
+	 */
 	public function debugMode(){
 		return false;
 	}
 	
+	/**
+	 * Getting the default controller's name.
+	 * This is useful for common actions, like pageNotFound.
+	 * @return The name.
+	 */
 	public function getDefaultController(){
 		return $this->name;
 	}
 	
+	/**
+	 * Getting the folder containing the application's cache files.
+	 * @return The folder's path.
+	 */
 	public function getCacheFolder(){
 		return CACHE_FOLDER . '/' . $this->name;
 	}
