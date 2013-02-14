@@ -20,6 +20,15 @@ abstract class Query{
 	}
 	
 	/**
+	 * Quoting the specified string.
+	 * @param $str The string to quote.
+	 * @return The quoted string.
+	 */
+	protected function quote($str){
+		return DB::quote($str);
+	}
+	
+	/**
 	 * Gets the query string to execute.
 	 */
 	public abstract function getQuery();

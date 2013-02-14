@@ -47,10 +47,12 @@ class Response{
 					$routeStr = 'None found';
 				}
 				
+				$queries = DB::getQueries();
+				
 				$exec = microtime(true) -  $_SERVER['REQUEST_TIME_FLOAT'];
 				$infos = array(
 					'Execution' => round($exec * 1000) . 'ms',
-					'Queries' => DB::getQueries() . ' (' . round(DB::getQueryTime(),5) . ' - ' . round(100 * DB::getQueryTime() / $exec,1) . '%)',
+					'Queries' => count($queries) . ' (' . round(DB::getQueryTime(),5) . ' - ' . round(100 * DB::getQueryTime() / $exec,1) . '%)',
 					'Route' => $routeStr,
 					'Request' => Application::getRunningApplication()->getRequest()->getRequestedPath()
 				);
@@ -62,7 +64,7 @@ class Response{
 					$infos['Identity'] = 'none';
 				}
 				
-				$toolbar = '<div style="position:fixed;width:100%;border-top:1px solid gray;bottom:0px;left:0px;background-color: silver; box-shadow: 0px 0px 10px silver; ">';
+				$toolbar = '<br /><br /><div style="position:fixed;width:100%;border-top:1px solid gray;bottom:0px;left:0px;background-color: silver; box-shadow: 0px 0px 10px silver; ">';
 				foreach($infos as $info=>$value){
 					$toolbar .= '<span style="height: 20px; overflow: auto; padding:5px;display:block;float:left;width:200px;border-right:1px solid gray;font-size:0.8em;">' . $info . ': ' . $value . '</span>';
 				}

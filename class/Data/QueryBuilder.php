@@ -107,7 +107,7 @@ class QueryBuilder extends Query{
 		if(count($this->where) > 0){
 			$last = $this->where[count($this->where)-1];
 			if($last !== ' AND ' && $last !== ' OR '){
-				$this->orWhere();
+				$this->andWhere();
 			}
 		}
 		
@@ -235,14 +235,5 @@ class QueryBuilder extends Query{
 			$value = $this->quote($value);
 		}
 		return parent::setParam($name,$value);
-	}
-	
-	/**
-	 * Quoting the specified string.
-	 * @param $str The string to quote.
-	 * @return The quoted string.
-	 */
-	protected function quote($str){
-		return DB::quote($str);
 	}
 }

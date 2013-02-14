@@ -8,7 +8,7 @@ namespace common\Data;
  */
 class DB{
 	private static $pdo = null;
-	private static $queries = 0;
+	private static $queries = array();
 	private static $queryTime = 0;
 
 	/**
@@ -34,7 +34,7 @@ class DB{
 	public static function exec($query){
 		self::connect();
 		
-		++self::$queries;
+		self::$queries[] = $query;
 		
 		$start = microtime(true);
 		$changes = self::$pdo->exec($query);
@@ -52,7 +52,7 @@ class DB{
 	public static function fetch($query){
 		self::connect();
 		
-		++self::$queries;
+		self::$queries[] = $query;
 		
 		$start = microtime(true);
 		
@@ -91,7 +91,7 @@ class DB{
 	}
 	
 	/**
-	 * Getting the number of queries that have been executed.
+	 * Getting the queries that have been executed.
 	 */
 	public static function getQueries(){
 		return self::$queries;

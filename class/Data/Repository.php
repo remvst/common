@@ -23,21 +23,25 @@ abstract class Repository{
 	
 	/**
 	 * Getting the table columns.
+	 * @return The array of objectAttribute => sqlColumn
 	 */
 	protected abstract function getColumns();
 	
 	/**
 	 * Getting the primary key.
+	 * @return The array of attributes which define the primary key.
 	 */
 	protected abstract function getKey();
 	
 	/**
 	 * Getting the table name.
+	 * @return The table name in the database.
 	 */
 	public abstract function getTable();
 	
 	/**
 	 * Finding all data.
+	 * @return All data from the repository.
 	 */
 	public function findAll(){
 		return $this->find();
@@ -73,18 +77,17 @@ abstract class Repository{
 		
 		$qb = new QueryBuilder($this->getTable(),'t');
 		
-		// If no column has been specified, then we get all of them. 
-		$sep = '';
+		// If no column has been specified, then we get all of them.
 		if($columns === null){
-			foreach($entityColumns as $col=>$sqlCol){
-				$qb->select('t.'.$sqlCol,$col);
-			}
-		}else{
-			foreach($columns as $col){
-				$qb->select($this->formatColumn($col,'t'),$col);
-			}
+			$columns = array_keys($entityColumns);
 		}
 		
+		// SELECT clause
+		foreach($columns as $col){
+			$qb->select($this->formatColumn($col,'t'),$col);
+		}
+		
+		// WHERE clause
 		if($where !== null && count($where) > 0){
 			$i = 0;
 			foreach($where as $col=>$value){
@@ -92,7 +95,7 @@ abstract class Repository{
 				if($i > 0)	$qb->andWhere();
 				
 				// Adding the condition, using a parameter.
-				$qb->where($sep.$this->formatColumn($col,'t').'=:param'.$i);
+				$qb->where($this->formatColumn($col,'t').'=:param'.$i);
 				++$i;
 			}
 			
@@ -154,55 +157,43 @@ abstract class Repository{
 		
 		$entityColumns = $this->getColumns();
 		
-		// Creating the INSERT or UPDATE query.
-		// TODO create a new class for that.
+		// Creating a query builder.
         if($entity->isNew()){
-            // Creating a new line for the table
-            $sqlValues = '';
-            $sep = '';
-            $sqlColumns = '';
-            foreach($entityColumns as $objCol=>$sqlCol){
-                $sqlColumns .= $sep.$sqlCol;
-                
-                $getter = 'get'.ucwords($objCol);
-                $sqlValues .= $sep . DB::quote($entity->$getter());
-                
-                $sep = ', ';
-            }
-            
-            $query = 'INSERT INTO '.$this->getTable().' (' . $sqlColumns . ') VALUES (' . $sqlValues . ')';
-            
-            $res = (DB::exec($query) == 1);
-            
-            $entity->setId(DB::insertId());
-            
-            return $res;
+        	$qb = new InsertQueryBuilder($this->getTable());
         }else{
-            // Updating the line
-            $sqlValues = '';
-            $sep = '';
-            foreach($entityColumns as $objCol=>$sqlCol){
-                $getter = 'get'.ucwords($objCol);
-                $sqlValues .= $sep . $sqlCol . ' = ' . DB::quote($entity->$getter());
-                $sep = ', ';
-            }
-            
-            // WHERE clause : quite important, since it will allow only the right
-            // line to be changed.
-            $where = '';
-            $sep = '';
-            foreach($this->getKey() as $key){
+        	$qb = new UpdateQueryBuilder($this->getTable());
+			
+			// If the query is an update, we have to had a WHERE clause.
+			foreach($this->getKey() as $key){
                 $getter = 'get'.ucwords($key);
                 
-                $where .= $sep . $entityColumns[$key] . ' = ' . DB::quote($entity->$getter());
-                $sep = ' AND '; 
+				$qb->where($entityColumns[$key] . '=:whereparam' . $key);
+				$qb->setParam('whereparam' . $key,$entity->$getter());
             }
-            
-            $query = 'UPDATE ' . $this->getTable() . ' 
-            SET ' . $sqlValues . ' 
-            WHERE ' . $where;
-            
-            return (DB::exec($query) == 1);
+        }
+		
+		// Adding the values for each attribute.
+        foreach($entityColumns as $objCol=>$sqlCol){
+            $getter = 'get'.ucwords($objCol);
+			$value = $entity->$getter();
+			
+			// Adding the attribute to the query only if not null.
+			if($value != null){
+        		$qb->addColumn($sqlCol,':valueparam'.$objCol);
+				$qb->setParam('valueparam' . $objCol,$entity->$getter());
+			}
+        }
+		
+		$query = $qb->getQuery();
+		
+        if(DB::exec($query) == 1){
+        	// Updating the entity ID if newly created.
+			if($entity->isNew()){
+            	$entity->setId(DB::insertId());	
+			}
+			return true;
+        }else{
+        	return false;
         }
 	} 
 	
