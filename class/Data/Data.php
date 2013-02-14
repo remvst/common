@@ -1,9 +1,9 @@
 <?php
-/**
- * Any data which can be represented within the database
- */
 namespace common\Data;
 
+/**
+ * Any data which can be represented within the database.
+ */
 class Data{
     /**
      * ID. Is used for every single data unit.

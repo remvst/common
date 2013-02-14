@@ -12,7 +12,9 @@ abstract class Repository{
 	private $transactionStarted;
 	
 	/**
-	 * 
+	 * Creates a new repository. The reason why this
+	 * constructor is private is to avoid multiple 
+	 * instances for the same repository.
 	 */
 	private function __construct(){
 		$this->entityType = str_replace('Repository','',get_class($this));
@@ -59,6 +61,12 @@ abstract class Repository{
 	/**
 	 * Finding data from the repository.
 	 * The $where parameters specifies AND conditions.
+	 * @param $columns The columns to retrieve.
+	 * @param $where The where clauses (will be linked by AND)
+	 * @param $orderBy The ways to order by.
+	 * @param $firstResult The offset.
+	 * @param $maxResults The maximum number of results to retrieve.
+	 * @return The results.
 	 */
 	public function find($columns = null,$where = null,$orderBy = null,$firstResult = 0,$maxResults = null){
 		$entityColumns = $this->getColumns();
@@ -79,16 +87,16 @@ abstract class Repository{
 		
 		if($where !== null && count($where) > 0){
 			$i = 0;
-			$sep = '';
-			$whereClause = '';
 			foreach($where as $col=>$value){
-				$whereClause .= $sep.$this->formatColumn($col,'t').'=:param'.$i;
-				$sep = ' AND ';
+				// Adding the AND link between conditions.
+				if($i > 0)	$qb->andWhere();
+				
+				// Adding the condition, using a parameter.
+				$qb->where($sep.$this->formatColumn($col,'t').'=:param'.$i);
 				++$i;
 			}
 			
-			$qb->where($whereClause);
-			
+			// Then replacing parameters.
 			$i = 0;
 			foreach($where as $col=>$value){
 				$qb->setParam('param'.$i,$value);
@@ -96,16 +104,16 @@ abstract class Repository{
 			}
 		}
 		
+		// Adding the ORDER BY clause
 		if($orderBy !== null){
 			foreach($orderBy as $col=>$way){
 				$qb->orderBy($this->formatColumn($col,'t'),$way);
 			}
 		}
 		
+		// Setting the LIMIT clause.
 		$qb->setFirstResult($firstResult);
 		$qb->setMaxResults($maxResults);
-		
-		//~ echo $qb->getQuery();
 		
 		$res = DB::fetch($qb->getQuery());
             
@@ -120,20 +128,25 @@ abstract class Repository{
 	
 	/**
 	 * Getting a repository from the entity type.
+	 * @param $entityType The type of entity to be handled via the repository.
+	 * @return The repository. 
 	 */
-	public static function getRepository($repositoryName){
-		if(!isset(self::$repositories[$repositoryName])){
-			$className = $repositoryName . 'Repository';
-			self::$repositories[$repositoryName] = new $className();
+	public static function getRepository($entityType){
+		// Creates the repository if not created yet.
+		if(!isset(self::$repositories[$entityType])){
+			$className = $entityType . 'Repository';
+			self::$repositories[$entityType] = new $className();
 		}
-		return self::$repositories[$repositoryName];
+		
+		return self::$repositories[$entityType];
 	}
 	
 	/**
 	 * Adding a new entity to save into the database in the current transaction.
+	 * @param $entity The entity to persist.
 	 */
 	public function persist($entity){
-		// Starting a transaction if needed.
+		// Starting a transaction if not started yet.
 		if(!$this->transactionStarted){
 			$this->transactionStarted = true;
 			DB::exec('START TRANSACTION');
@@ -141,6 +154,8 @@ abstract class Repository{
 		
 		$entityColumns = $this->getColumns();
 		
+		// Creating the INSERT or UPDATE query.
+		// TODO create a new class for that.
         if($entity->isNew()){
             // Creating a new line for the table
             $sqlValues = '';
@@ -201,6 +216,8 @@ abstract class Repository{
 	
 	/**
 	 * Creates an object based on the specified data.
+	 * @param $data The array representing the entity. 
+	 * @return The created object.
 	 */
 	protected function createObject($data){
 		$obj = new $this->entityType($data);
@@ -210,6 +227,7 @@ abstract class Repository{
 	
 	/**
 	 * Gets columns that are calculated via SQL.
+	 * @return An array of alias => column function.
 	 */
 	protected function getDynamicColumns(){
 		return null;
@@ -217,6 +235,8 @@ abstract class Repository{
 	
 	/**
 	 * Gets the SQL column corresponding to the given alias.
+	 * @param $columnName The column name.
+	 * @return The column's name or function in the database.
 	 */
 	private function seekColumn($columnName){
 		$cols = $this->getColumns();
@@ -232,14 +252,23 @@ abstract class Repository{
 		return null;
 	}
 	
+	/**
+	 * Formats the specified column for the specified 
+	 * table prefix. This is especially useful for 
+	 * dynamic columns, for which the prefix might 
+	 * not be at the same location.
+	 * @param $columnName
+	 * @param $prefix
+	 * @return The formatted column.
+	 */
 	private function formatColumn($columnName,$prefix){
-		$col = $this->seekColumn($columnName);
-		
+		// Checking in the regular columns.
 		$cols = $this->getColumns();
 		if(isset($cols[$columnName])){
 			return $prefix . '.' . $cols[$columnName];
 		}
 		
+		// Checking in the dynamic columns.
 		$cols = $this->getDynamicColumns();
 		if(isset($cols[$columnName])){
 			return str_replace('%prefix%',$prefix,$cols[$columnName]);

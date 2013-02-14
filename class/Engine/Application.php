@@ -116,6 +116,12 @@ abstract class Application{
 			$this->twig->addFunction(new \Twig_SimpleFunction('asset', function ($resource) use($rootPath) {
 				return $rootPath . '/' . $resource;
 			}));
+			$this->twig->addFilter(new \Twig_SimpleFilter('truncate', function ($str,$length) {
+				if(strlen($str) > $length)
+					return substr($str,0,$length) . '...';
+				else
+					return $str;
+			}));
 			
 			// Defining global variables
 			$this->twig->addGlobal('appRoot',$this->rootPath);
@@ -198,7 +204,7 @@ abstract class Application{
 			
 			// Adding a log and a report
 			$this->addLog(get_class($ex).' at action ' . isset($route) ? $route['action'] : '<unknown>' . ' : ' . $ex->getMessage() . ' (file: ' . $ex->getFile() . ', line: ' . $ex->getLine() . ')');
-			$this->reportCrash($ex,$action);
+			$this->reportCrash($ex,isset($route) ? $route['action'] : 'none');
 		}
 		
 		// Sending the response to the client

@@ -1,5 +1,11 @@
 <?php 
 namespace common\Data;
+
+/**
+ * Class which allows the dynamic creation of SQL queries.
+ * This class also provides parameter usage, for security purpose.
+ * Works only for MySQL.
+ */
 class QueryBuilder extends Query{
 	private $tables;
 	private $columns;
@@ -9,12 +15,15 @@ class QueryBuilder extends Query{
 	private $maxResults;
 	private $links;
 	
+	/**
+	 * Creates a new Query for the specified table.
+	 * @param $table The table to use.
+	 * @param $alias The table's alias.
+	 */
 	public function __construct($table = null,$alias = 't'){
 		parent::__construct();
 		
-		$this->table = $table;
-		$this->tableAlias = $alias;
-		
+		// Initializing query params.
 		$this->columns = '';
 		$this->orderBy = '';
 		$this->where = array();
@@ -30,33 +39,42 @@ class QueryBuilder extends Query{
 	
 	/**
 	 * Adds a table/view to the FROM clause
+	 * @param $table
+	 * @param $alias
+	 * @return The current QueryBuilder object.
 	 */
 	public function from($table,$alias){
 		$this->tables[] = array('table'=>$table,'alias'=>$alias);
+		return $this;
 	}
 	
 	/**
 	 * Adds a union clause
+	 * @return The current QueryBuilder object.
 	 */
 	public function union(Query $query){
 		$this->links[] = array(
 			'type' => 'UNION',
 			'query' => $query
 		);
+		return $this;
 	}
 	
 	/**
 	 * Adds a minus clause
+	 * @return The current QueryBuilder object.
 	 */
 	public function minus(Query $query){
 		$this->links[] = array(
 			'type' => 'MINUS',
 			'query' => $query
 		);
+		return $this;
 	}
 	
 	/**
 	 * Adding a new column to retrieve.
+	 * @return The current QueryBuilder object.
 	 */
 	public function select($column,$alias){
 		if(strlen($this->columns) > 0){
@@ -67,29 +85,37 @@ class QueryBuilder extends Query{
 	}
 	
 	public function andWhere(){
-		$this->where[] = 'AND';
+		$this->where[] = ' AND ';
 		return $this;
 	}
 	
 	public function orWhere(){
-		$this->where[] = 'OR';
+		$this->where[] = ' OR ';
 		return $this;
 	}
 	
 	/**
 	 * Adding a new condition to the WHERE clause.
+	 * The condition has to be a string, so if you
+	 * wish to use subqueries for conditions, you 
+	 * should use parameters.
+	 * @param $condition The condition to add.
+	 * @return The current QueryBuilder object.
 	 */
-	public function where($left,$operator = null,$right = null){
+	public function where($condition){
+		// Adding an OR operator if needed.
 		if(count($this->where) > 0){
-			$last = $this->where[count($this->where)];
-			if($last !== 'AND' && $last !== 'OR')
-				$this->where[] = 'OR';
+			$last = $this->where[count($this->where)-1];
+			if($last !== ' AND ' && $last !== ' OR '){
+				$this->orWhere();
+			}
 		}
 		
-		$this->where[] = $left;
+		// Adding the actual condition
+		$this->where[] = $condition;
 
-		// Storing parameters
-		preg_match_all('#:([a-zA-Z0-9_-]+)#',$left,$matches);
+		// Storing parameters names with a default null value.
+		preg_match_all('#:([a-zA-Z0-9_-]+)#',$condition,$matches);
 		foreach($matches[0] as $match){
 			$this->params[substr($match,1)] = null;
 		}
@@ -98,6 +124,9 @@ class QueryBuilder extends Query{
 	
 	/**
 	 * Adding a new ORDER BY column.
+	 * @param $column The column to order by.
+	 * @param $way The way to order by (DESC or ASC)
+	 * @return The current QueryBuilder object.
 	 */
 	public function orderBy($column,$way = 'ASC'){
 		if(strlen($this->orderBy) > 0){
@@ -109,6 +138,8 @@ class QueryBuilder extends Query{
 	
 	/**
 	 * Setting the first result.
+	 * @param $first The first result to get (offset).
+	 * @return The current QueryBuilder object.
 	 */
 	public function setFirstResult($first){
 		$this->firstResult = (int)$first;
@@ -117,6 +148,8 @@ class QueryBuilder extends Query{
 	
 	/**
 	 * Setting the maximum number of results.
+	 * @param $max The number of results.
+	 * @return The current QueryBuilder object.
 	 */
 	public function setMaxResults($max){
 		$this->maxResults = (int)$max;
@@ -125,10 +158,12 @@ class QueryBuilder extends Query{
 	
 	/**
 	 * Getting the actual SQL query.
+	 * @return The query string.
 	 */
 	public function getQuery(){
 		$query = 'SELECT ' . $this->columns;
 		
+		// FROM clause
 		$query .= ' FROM ';
 		$sep = '';
 		foreach($this->tables as $table){
@@ -140,17 +175,22 @@ class QueryBuilder extends Query{
 			$sep = ',';
 		}
 		
+		// WHERE clause
 		if(count($this->where) > 0){
 			$where = ' WHERE ';
 			foreach($this->where as $condition){
-				if($where instanceof Query){
-					$where .= $condition->getQuery();
-				}else{
-					$where .= $condition;
-				}
+				$where .= $condition;
 			}
 			
+			// Replacing parameters. They were already quoted
+			// in the setParam method.
 			foreach($this->params as $param=>$value){
+				if($value === null){
+					throw new \common\Exception\DatabaseException('Parameter ' . $param . ' has no value.');
+				}else if($value instanceof Query){
+					$value = $value->getQuery();
+				}
+				
 				$where = str_replace(':'.$param,$value,$where);
 			}
 			
@@ -162,7 +202,7 @@ class QueryBuilder extends Query{
 			$query .= ' ORDER BY ' . $this->orderBy;
 		}
 		
-		// Links (union, minus...)
+		// Links (UNION, MINUS...)
 		foreach($this->links as $link){
 			$query .= ' ' . $link['type'] . ' ' . $link['query']->getQuery();
 		}
@@ -177,16 +217,31 @@ class QueryBuilder extends Query{
 		return $query;
 	}
 	
+	/**
+	 * Sets the specified param to the specified value.
+	 * @throws DatabaseException if the parameter does not exist in any of the WHERE clauses.
+	 * @param $name
+	 * @param $value
+	 * @return The current QueryBuilder object.
+	 */
 	public function setParam($name,$value){
 		if(!array_key_exists($name,$this->params)){
-			throw new \Exception('Parameter ' . $name . ' does not exist.');
+			throw new \common\Exception\DatabaseException('Parameter ' . $name . ' does not exist.');
 		}
+		
+		// If the parameter is a string (and not a 
+		// Query object), we quote it.
 		if(is_string($value)){
 			$value = $this->quote($value);
 		}
 		return parent::setParam($name,$value);
 	}
 	
+	/**
+	 * Quoting the specified string.
+	 * @param $str The string to quote.
+	 * @return The quoted string.
+	 */
 	protected function quote($str){
 		return DB::quote($str);
 	}

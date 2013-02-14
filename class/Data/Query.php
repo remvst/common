@@ -1,5 +1,9 @@
 <?php
 namespace common\Data;
+
+/**
+ * Abstract class for all SQL queries.
+ */
 abstract class Query{
 	protected $params;
 	
