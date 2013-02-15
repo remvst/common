@@ -236,4 +236,21 @@ abstract class Controller{
 	public function generateUrl($route,$params = array()){
 		return $this->application->getRouter()->generateUrl($route,$params);
 	}
+	
+	public function showError($title,$message){
+		return '<!DOCTYPE html>
+			<html>
+				<head>
+					<title>'.$title.'</title>
+				</head>
+				
+				<body>
+					<div style="width: 40%; margin: auto; border: 1px solid red; background-color: rgba(255,0,0,0.3); padding: 10px; font-family: Arial; font-size: 0.8em;">
+						<h1 style="margin: 0px;">' . $title . '</h1>
+						<p>' . $message . '</p>
+					</div>
+				</body>
+			</html>
+		';
+	}
 }

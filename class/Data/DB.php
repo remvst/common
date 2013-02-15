@@ -25,6 +25,7 @@ class DB{
 			catch(PDOException $e){
 				throw new \common\Exception\DatabaseException('Database connection failure.');
 			}
+			self::exec("SET NAMES 'utf8'");
 		}
 	}
 	

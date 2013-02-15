@@ -50,7 +50,7 @@ abstract class Application{
 	private $identity;
 	private $authManager;
 	
-	private $twig;
+	protected $twig;
 	
 	/**
 	 * Building the application : creates both the router and the controller,
@@ -113,8 +113,8 @@ abstract class Application{
 			$this->twig->addFunction(new \Twig_SimpleFunction('generateUrl', function ($route,$params = array()) use($app) {
 				return $app->getRouter()->generateUrl($route,$params);
 			}));
-			$this->twig->addFunction(new \Twig_SimpleFunction('asset', function ($resource) use($rootPath) {
-				return $rootPath . '/' . $resource;
+			$this->twig->addFunction(new \Twig_SimpleFunction('asset', function ($resource) use($app) {
+				return $app->getRootDir() . '/' . $resource;
 			}));
 			$this->twig->addFilter(new \Twig_SimpleFilter('truncate', function ($str,$length) {
 				if(strlen($str) > $length)
@@ -148,6 +148,7 @@ abstract class Application{
 		// TODO check if working
 		$lastSlash = strrpos($_SERVER['SCRIPT_NAME'],'/');
 		$this->rootPath = substr($_SERVER['SCRIPT_NAME'],0,$lastSlash);
+		//die($this->rootPath;)
 		
 		try{
 			// Creating request and response objets
@@ -180,26 +181,28 @@ abstract class Application{
 			if($ex instanceof \common\Exception\HttpException){
 				$ex->apply($this->response);
 				$message = $ex->getMessage();
+				$title = 'Error ' . $ex->getErrorCode();
 			}else{
 				// For generic exceptions, we don't display the error message,
 				// for security reasons.
 				$this->response->addHeader('HTTP/1.0 500 Server error');
 				$message = 'Server error. Please try again later or contact the server administrator.';
-			}
-			
-			// On a local environment, we display the actual message.
-			if(ENV_LOCAL || $this->debugMode()){
-				$message = $ex->getMessage();
-				
-				$message .= '<h3>Stack trace:</h3>';
-				$message .= $this->printStackTrace($ex->getTrace());
+				$title = 'Application error';
 			}
 			
 			// Adding a contact email
 			$message .= '<br />Please email us at ' . $this->configuration->getValue('email') . ' to let us know about the problem.';
 			
+			// On a local environment, we display the actual message.
+			if(ENV_LOCAL || $this->debugMode()){
+				$message .= '<br /><br />Exception message: '.$ex->getMessage();
+				
+				$message .= '<h3>Stack trace:</h3>';
+				$message .= $this->printStackTrace($ex->getTrace());
+			}
+			
 			// Making a nice HTML error.
-			$htmlError = $this->showError('Application error',$message);
+			$htmlError = $this->showError($title,$message);
 			$this->response->setContent($htmlError);
 			
 			// Adding a log and a report
@@ -394,7 +397,7 @@ abstract class Application{
 	 * @param $name The controller's name. For instance, if Example, ExampleController will be loaded.
 	 * @return The controller.
 	 */
-	private function getController($name = null){
+	protected function getController($name = null){
 		if($name == null){
 			$name = $this->name;
 		}
@@ -511,20 +514,21 @@ abstract class Application{
 	 * Method that returns a nice error message formatted with HTML and CSS.
 	 */
 	private function showError($title,$message){
-		return '<!DOCTYPE html>
+		try{
+			$controller = $this->controller !== null ? $this->controller : $this->getController();
+			return $controller->showError($title,$message);
+		}catch(\Exception $e){
+			return '<!DOCTYPE html>
 			<html>
 				<head>
-					<title>'.$title.'</title>
+					<title>' . $title . '</title>
 				</head>
-				
 				<body>
-					<div style="width: 40%; margin: auto; border: 1px solid red; background-color: rgba(255,0,0,0.3); padding: 10px; font-family: Arial; font-size: 0.8em;">
-						<h1 style="margin: 0px;">' . $title . '</h1>
-						<p>' . $message . '</p>
-					</div>
+					<h1>' . $title . '</h1>
+					<p>' . $message . '</p>
 				</body>
-			</html>
-		';
+			</html>';
+		}
 	}
 	
 	/**

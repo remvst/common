@@ -30,4 +30,8 @@ class HttpException extends \Exception{
 	public function apply($response){
 		$response->addHeader('HTTP/1.1 ' . $this->errorCode . ' ' . $this->message);
 	}
+	
+	public function getErrorCode(){
+		return $this->errorCode;
+	}
 }

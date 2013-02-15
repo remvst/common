@@ -47,7 +47,7 @@ abstract class Router{
 			$path = substr($request->getRequestedPath(),1);
 			//~ echo $path;
 			foreach($this->routes as $route){
-				if($this->checkPathMatch($route['pattern'],$path)){
+				if($this->checkPathMatch($route,$path)){
 					$this->route = $route;
 					break;
 				}
@@ -68,13 +68,27 @@ abstract class Router{
 	 * Checks if the specified pattern matches the specified path.
 	 * If the pattern is matched, the function identifies the parameters
 	 * and stores if the the $urlParams array.
-	 * @param $pattern The pattern to check, without the initial slash.
+	 * @param $route The route to check, without the initial slash.
 	 * @param $path The path to check, without the initial slash.
 	 * @return true if the pattern matches.
 	 */
-	public function checkPathMatch($pattern,$path){
-		$regexPattern = str_replace('*','(.*)',$pattern);
-		$regexPattern = preg_replace('#\{[a-zA-Z]*\}#','.*',$regexPattern);
+	public function checkPathMatch($route,$path){
+		$pattern = $route['pattern'];
+		
+		// Replacing "*"
+		$regexPattern = str_replace('*','(.*)',$route['pattern']);
+		
+		// Replacing parameters by their pattern.
+		if(isset($route['requirements'])){
+			foreach($route['requirements'] as $param=>$pattern){
+				$regexPattern = str_replace('{' . $param . '}',$pattern,$regexPattern);
+			}
+		}
+		
+		// Replacing unspecified params
+		$regexPattern = preg_replace('#\{[a-zA-Z]*\}#','.+',$regexPattern);
+		
+		//echo $regexPattern;
 		$regexPattern = '#^'.$regexPattern.'$#';
 		
 		if(!preg_match($regexPattern,$path)){
@@ -83,8 +97,8 @@ abstract class Router{
 			$varNames = array();
 			$matches = array();
 			
-			// Getting all vars
-			preg_match_all('#\{([a-zA-Z]*)\}#',$pattern,$matches);
+			// Getting all var names from the pattern.
+			preg_match_all('#\{([a-zA-Z]*)\}#',$route['pattern'],$matches);
 			
 			$i = 0;
 			foreach($matches[1] as $v){
@@ -92,14 +106,23 @@ abstract class Router{
 			}
 			
 			// Formatting the pattern to get the vars
-			$regexPattern = str_replace('*','.*',$pattern);
+			$regexPattern = str_replace('*','.*',$route['pattern']);
+			
+			// Replacing parameters by their pattern.
+			if(isset($route['requirements'])){
+				foreach($route['requirements'] as $param=>$pattern){
+					$regexPattern = str_replace('{' . $param . '}','('.$pattern.')',$regexPattern);
+				}
+			}
+			
+			// Unspecified params
 			$regexPattern = preg_replace('#\{([a-zA-Z]*)\}#','(.*)',$regexPattern);
 			$regexPattern = '#'.$regexPattern.'#';
 			
 			// Getting the values
 			preg_match_all($regexPattern,$path,$matches,PREG_PATTERN_ORDER);
 			
-			// Storing them in the var
+			// Storing them
 			$this->urlParams = array();
 			$nMatches = count($matches);
 			for($i = 1 ; $i < $nMatches ; ++$i){
@@ -149,9 +172,17 @@ abstract class Router{
 		$url = $this->routes[$routeName]['pattern'];
 		$url = str_replace('*','',$url);
 		foreach($params as $p=>$v){
+			// Checking if the given parameter value matches the requirements. 
+			if(isset($this->routes[$routeName]['requirements'][$p]) 
+				&& !preg_match('#^' . $this->routes[$routeName]['requirements'][$p] . '$#',$v)){
+				throw new \common\Exception\HttpException(500,'Router error. (' . $p . '=' . $v . ')');
+			}
+			
 			$url = str_replace('{'.$p.'}',$v,$url);
 		}
+		
 		$url = $this->application->getRootDir() . '/' . $url;
+		
 		return $url;
 	}
 }
