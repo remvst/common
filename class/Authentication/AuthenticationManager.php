@@ -49,7 +49,7 @@ abstract class AuthenticationManager{
 	 * @throws HttpException if the identity is null and permissions are required.
 	 * @return true if the user has the right permissions.
 	 */
-	public function checkPermissions(Identity $identity,$permissions){
+	public function checkPermissions($identity,$permissions){
 		if(!is_object($identity) && count($permissions) > 0){
 			throw new \common\Exception\HttpException(500,'No identity specified.');
 		}

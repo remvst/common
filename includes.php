@@ -11,6 +11,11 @@ define('LOG_FOLDER',COMMON_ROOT.'/logs');
 // Displaying errors only if the script is executed locally.
 ini_set('display_errors',ENV_LOCAL);
 
+// Managing uncaught exceptions.
+set_exception_handler(function(){
+	die('Unknown error.');
+});
+
 // UTF-8 encoding
 header('Content-Type: text/html; charset=UTF-8');
 

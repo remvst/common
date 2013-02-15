@@ -47,15 +47,19 @@ class Response{
 					$routeStr = 'None found';
 				}
 				
-				$queries = DB::getQueries();
-				
 				$exec = microtime(true) -  $_SERVER['REQUEST_TIME_FLOAT'];
 				$infos = array(
 					'Execution' => round($exec * 1000) . 'ms',
-					'Queries' => count($queries) . ' (' . round(DB::getQueryTime(),5) . ' - ' . round(100 * DB::getQueryTime() / $exec,1) . '%)',
 					'Route' => $routeStr,
 					'Request' => Application::getRunningApplication()->getRequest()->getRequestedPath()
 				);
+				
+				$dbConnections = DB::getConnections();
+				$i = 1;
+				foreach($dbConnections as $connection){
+					$infos['DB #'.$i] = count($connection->getQueries()) . ' queries (' . round($connection->getQueryTime(),5) . ' - ' . round(100 * $connection->getQueryTime() / $exec,1) . '%)';
+					++$i;
+				}
 				
 				$id = Application::getRunningApplication()->getIdentity();
 				if(is_object($id)){

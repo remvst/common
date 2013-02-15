@@ -201,6 +201,10 @@ abstract class Controller{
 			$authManager = $this->application->getAuthenticationManager();
 			$identity = $this->application->getIdentity();
 			
+			if($identity == null){
+				die('loooolraté');
+			}
+			
 			if(!$authManager->checkPermissions($identity,$perms)){
 				if($identity === null || $identity->isDefaultIdentity()){
 					// If the user is not logged in, we allow him to log in.

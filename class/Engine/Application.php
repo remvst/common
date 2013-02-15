@@ -51,6 +51,7 @@ abstract class Application{
 	private $authManager;
 	
 	protected $twig;
+	protected $db;
 	
 	/**
 	 * Building the application : creates both the router and the controller,
@@ -78,9 +79,7 @@ abstract class Application{
 		$this->twig = null;
 		$this->authManager = null;
 		$this->identity = null;
-		
-		//~ debug_print_backtrace();
-		
+		$this->db = null;
 	}
 	
 	/**
@@ -358,14 +357,14 @@ abstract class Application{
 	}
 	
 	/**
-	 * 
+	 * @return Application recap.
 	 */
 	public function getRecap(){
 		throw new \Exception('No recap defined.');
 	}
 	
 	/**
-	 * 
+	 * @return Application recap.
 	 */
 	public function getCharts(){
 		throw new \Exception('No charts defined.');
@@ -472,7 +471,9 @@ abstract class Application{
 			try{
 				// Catching any exception in order to return a null identity.
 				$this->identity = $this->getAuthenticationManager()->getIdentity();
-			}catch(\Exception $e){}
+			}catch(\Exception $e){
+				
+			}
 		}
 		return $this->identity;
 	}
@@ -564,5 +565,21 @@ abstract class Application{
 	 */
 	public function getCacheFolder(){
 		return CACHE_FOLDER . '/' . $this->name;
+	}
+	
+	/**
+	 * Getting the application's database connection.
+	 */
+	public function getDB(){
+		if($this->db === null){
+			$this->db = new \common\Data\DB(array(
+				'host' => $this->configuration->getValue('dbhost'),
+				'user' => $this->configuration->getValue('dbuser'),
+				'pass' => $this->configuration->getValue('dbpass'),
+				'name' => $this->configuration->getValue('dbname'),
+				'port' => $this->configuration->getValue('dbport'),
+			));
+		}
+		return $this->db;
 	}
 }

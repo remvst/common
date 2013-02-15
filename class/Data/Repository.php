@@ -10,15 +10,17 @@ abstract class Repository{
 	
 	private $entityType;
 	private $transactionStarted;
+	private $db;
 	
 	/**
 	 * Creates a new repository. The reason why this
 	 * constructor is private is to avoid multiple 
 	 * instances for the same repository.
 	 */
-	private function __construct(){
+	private function __construct($db){
 		$this->entityType = str_replace('Repository','',get_class($this));
 		$this->transactionStarted = false;
+		$this->db = $db;
 	}
 	
 	/**
@@ -118,7 +120,7 @@ abstract class Repository{
 		$qb->setFirstResult($firstResult);
 		$qb->setMaxResults($maxResults);
 		
-		$res = DB::fetch($qb->getQuery());
+		$res = $this->db->fetchResults($qb->getQuery());
             
         // Finally, creating objects with the actual type
         $objects = array();
@@ -134,11 +136,17 @@ abstract class Repository{
 	 * @param $entityType The type of entity to be handled via the repository.
 	 * @return The repository. 
 	 */
-	public static function getRepository($entityType){
+	public static function getRepository($entityType,DB $db = null){
 		// Creates the repository if not created yet.
 		if(!isset(self::$repositories[$entityType])){
 			$className = $entityType . 'Repository';
-			self::$repositories[$entityType] = new $className();
+			
+			// If no database is specified, using the default one.
+			if($db === null){
+				$db = \common\Engine\Application::getRunningApplication()->getDB();
+			}
+				
+			self::$repositories[$entityType] = new $className($db);
 		}
 		
 		return self::$repositories[$entityType];
@@ -152,7 +160,7 @@ abstract class Repository{
 		// Starting a transaction if not started yet.
 		if(!$this->transactionStarted){
 			$this->transactionStarted = true;
-			DB::exec('START TRANSACTION');
+			$this->db->execute('START TRANSACTION');
 		}
 		
 		$entityColumns = $this->getColumns();
@@ -186,10 +194,10 @@ abstract class Repository{
 		
 		$query = $qb->getQuery();
 		
-        if(DB::exec($query) == 1){
+        if($this->db->execute($query) == 1){
         	// Updating the entity ID if newly created.
 			if($entity->isNew()){
-            	$entity->setId(DB::insertId());	
+            	$entity->setId($this->db->insertId());	
 			}
 			return true;
         }else{
@@ -202,7 +210,7 @@ abstract class Repository{
 	 */
 	public function flush(){
 		$this->transactionStarted = false;
-		DB::exec('COMMIT');
+		$this->db->execute('COMMIT');
 	}
 	
 	/**
