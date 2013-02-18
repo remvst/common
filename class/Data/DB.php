@@ -73,7 +73,7 @@ class DB{
 		// Executing the query
 		$res = $this->pdo->query($query);
 		if($res === false){
-			throw new \common\Exception\DatabaseException('Error while executing query : ' . implode(' - ',self::$pdo->errorInfo()) . '.',$query);
+			throw new \common\Exception\DatabaseException('Error while executing query : ' . implode(' - ',$this->pdo->errorInfo()) . '.',$query);
 		}
 		
 		// Then returning an array with all results

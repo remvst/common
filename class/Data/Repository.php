@@ -275,4 +275,34 @@ abstract class Repository{
 		
 		throw new \Exception('Column ' . $columnName . ' doesn\'t exist');
 	}
+	
+	public function dump(){
+		if(!ENV_LOCAL){
+			throw new \common\Exception\HttpException(400,'Local env only.');
+		}
+		
+		$data = $this->findAll();
+		
+		$entityColumns = $this->getColumns();
+		
+		$query = '';
+		
+		// Creating the query builder.
+		$qb = new InsertQueryBuilder($this->getTable());
+		foreach($entityColumns as $entityCol=>$sqlCol){
+			$qb->addColumn($sqlCol,':param'.$entityCol);
+		}
+		
+		// For each row, setting parameters.
+		foreach($data as $l){
+			foreach($entityColumns as $entityCol=>$sqlCol){
+				$getter = 'get' . ucwords($entityCol);
+				$qb->setParam('param'.$entityCol,$l->$getter());
+			}
+			
+			$query .= $qb->getQuery() . ";\n";
+		}
+		
+		return $query;
+	}
 }

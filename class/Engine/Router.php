@@ -45,7 +45,7 @@ abstract class Router{
 	public function getRoute($request){
 		if($this->route === null){
 			$path = substr($request->getRequestedPath(),1);
-			//~ echo $path;
+			
 			foreach($this->routes as $route){
 				if($this->checkPathMatch($route,$path)){
 					$this->route = $route;
@@ -54,11 +54,7 @@ abstract class Router{
 			}
 			
 			if($this->route === null){
-				$this->route = array(
-					'controller' => $this->application->getDefaultController(),
-					'action' => 'pageNotFound'
-				);
-				//~ throw new \common\Exception\HttpException(500,'No route found.');
+				throw new \common\Exception\HttpException(404,'Page not found.');
 			}
 		}
 		return $this->route;

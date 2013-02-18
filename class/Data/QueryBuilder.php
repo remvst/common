@@ -191,7 +191,8 @@ class QueryBuilder extends Query{
 					$value = $value->getQuery();
 				}
 				
-				$where = str_replace(':'.$param,$value,$where);
+				//$where = str_replace(':'.$param,$value,$where);
+				$where = preg_replace('#:'.$param.'([^a-zA-Z0-9]|$)#',$value.'$1',$where);
 			}
 			
 			$query .= $where;

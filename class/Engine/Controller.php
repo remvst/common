@@ -143,7 +143,7 @@ abstract class Controller{
 		}else{			
 			$authManager = $this->application->getAuthenticationManager();
 			$authManager->unauthenticate();
-			return $this->getAuthenticationRedirectAction();
+			return $this->getAuthenticationRedirectAction('logout');
 		}
 	}
 	
@@ -165,7 +165,7 @@ abstract class Controller{
 			try{
 				$authManager = $this->application->getAuthenticationManager();
 				$authManager->tryAuthenticate($params['name'],$params['password']);
-				return $this->getAuthenticationRedirectAction();
+				return $this->getAuthenticationRedirectAction('login');
 			}catch(\common\Exception\AuthenticationException $e){
 				throw new \common\Exception\HttpException(500,'Authentication failed.');
 			}
@@ -179,7 +179,7 @@ abstract class Controller{
 	 * Gets the action to perform after authentication actions.
 	 * @return The action to perform.
 	 */
-	public function getAuthenticationRedirectAction(){
+	public function getAuthenticationRedirectAction($type){
 		throw new \common\Exception\HttpException(500,'No authentication redirect action defined.');
 	}
 	
@@ -200,10 +200,6 @@ abstract class Controller{
 			
 			$authManager = $this->application->getAuthenticationManager();
 			$identity = $this->application->getIdentity();
-			
-			if($identity == null){
-				die('loooolraté');
-			}
 			
 			if(!$authManager->checkPermissions($identity,$perms)){
 				if($identity === null || $identity->isDefaultIdentity()){

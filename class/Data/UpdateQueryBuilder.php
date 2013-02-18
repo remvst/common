@@ -81,7 +81,8 @@ class UpdateQueryBuilder extends Query{
 			if($value instanceof Query)
 				$value = $value->getQuery();
 			
-			$sql = str_replace(':'.$param,$value,$sql);
+			//$sql = str_replace(':'.$param,$value,$sql);
+			$sql = preg_replace('#:'.$param.'([^a-zA-Z0-9]|$)#',$value.'$1',$sql);
 		}
 		
 		return $sql;

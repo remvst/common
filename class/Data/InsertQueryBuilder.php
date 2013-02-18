@@ -27,16 +27,16 @@ class InsertQueryBuilder extends Query{
 		$sql .= '('.implode(',',array_values($this->columns)).')';
 		
 		foreach($this->params as $param=>$value){
-			//echo $param . ' <br />';
 			if($value === null){
-				echo $param;
-				//throw new \common\Exception\DatabaseException('Parameter "' . $param . '" has no value.');	
+				//echo $param;
+				throw new \common\Exception\DatabaseException('Parameter "' . $param . '" has no value.');	
 			}
 			
 			if($value instanceof Query)
 				$value = $value->getQuery();
 			
-			$sql = str_replace(':'.$param,$value,$sql);
+			// Here is a bit tricky part for 
+			$sql = preg_replace('#:'.$param.'([^a-zA-Z0-9]|$)#',$value.'$1',$sql);
 		}
 		
 		return $sql;

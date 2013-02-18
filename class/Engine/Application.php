@@ -141,13 +141,12 @@ abstract class Application{
 		}else{
 			self::$runningApplication = $this;
 		}
+		
 		session_start();
 		
 		// Building the root path (client-side)
-		// TODO check if working
 		$lastSlash = strrpos($_SERVER['SCRIPT_NAME'],'/');
 		$this->rootPath = substr($_SERVER['SCRIPT_NAME'],0,$lastSlash);
-		//die($this->rootPath;)
 		
 		try{
 			// Creating request and response objets
@@ -166,6 +165,9 @@ abstract class Application{
 			}else{
 				// Getting the appropriate action for the request
 				$route = $this->router->getRoute($this->request);
+				
+				// Adding history
+				$this->addHistory($route['controller'] . ':' . $route['action'] . ' (' . $this->request->getRequestedUri() . ')');
 			
 				$controllerType = $this->getNamespace() . '\\Controller\\' . $route['controller'] . 'Controller';
 				$this->controller = new $controllerType($this); 
@@ -205,7 +207,7 @@ abstract class Application{
 			$this->response->setContent($htmlError);
 			
 			// Adding a log and a report
-			$this->addLog(get_class($ex).' at action ' . isset($route) ? $route['action'] : '<unknown>' . ' : ' . $ex->getMessage() . ' (file: ' . $ex->getFile() . ', line: ' . $ex->getLine() . ')');
+			$this->addLog(get_class($ex).' at action ' . isset($route) && isset($route['action']) ? $route['action'] : '<unknown>' . ' : ' . $ex->getMessage() . ' (file: ' . $ex->getFile() . ', line: ' . $ex->getLine() . ')');
 			$this->reportCrash($ex,isset($route) ? $route['action'] : 'none');
 		}
 		
@@ -311,6 +313,8 @@ abstract class Application{
 	
 	/**
 	 * Getting a path without the application's root directory.
+	 * @param $path The path to process.
+	 * @return The original path, without the application's root.
 	 */
 	public function getPathFromRootDir($path){
 		if(strlen($this->rootPath) > 0 && strpos($path, $this->rootPath) === 0){
@@ -351,6 +355,7 @@ abstract class Application{
 	
 	/**
 	 * Gets the current running app.
+	 * @return The running application.
 	 */
 	public static function getRunningApplication(){
 		return self::$runningApplication;
@@ -364,14 +369,17 @@ abstract class Application{
 	}
 	
 	/**
-	 * @return Application recap.
+	 * @return Application charts data.
 	 */
 	public function getCharts(){
 		throw new \Exception('No charts defined.');
 	}
 	
 	/**
-	 * Getting the application router.
+	 * Getting the application router. If you wish to
+	 * change the Router type, you should override
+	 * this method.
+	 * @return The router.
 	 */
 	public function makeRouter(){
 		$class = str_replace($this->name . 'Application','Routing\\' . $this->name . 'Router',get_class($this));
@@ -423,9 +431,22 @@ abstract class Application{
 		$report .= 'Action=' . $action . "\n";
 		$report .= 'Type=' . get_class($ex) . "\n";
 		$report .= 'Message=' . $ex->getMessage() . "\n";
-		$report .= 'URI=' . $this->request->getRequestedURI() . "\n";
-		$report .= 'Referer=' . (isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '<unknown>') . "\n\n";
 		
+		$id = $this->getIdentity();
+		
+		$report .= 'Identity=' . $id !== null ? $id->getName() : '<none>' . "\n";
+		$report .= 'URI=' . $this->request->getRequestedURI() . "\n";
+		$report .= 'Referer=' . (isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '<unknown>') . "\n";
+		$report .= "History=\n";
+		
+		$history = $this->getHistory();
+		foreach($history as $h){
+			$report .= "\t- " . $h['date'] . ' : ' . $h['content'] . "\n";
+		}
+		
+		$report .= "\n\n";
+		
+		$report .= "Stack trace:\n";
 		foreach($ex->getTrace() as $s){
 			$report .= ' - ';
 			if(isset($s['class'])){
@@ -443,7 +464,7 @@ abstract class Application{
 	/**
 	 * Gets the authentication manager for the application.
 	 * If you need to use an authentication manager, you 
-	 * should override the makeAuthenticationManager method.
+	 * should override the makeAuthenticationManager() method.
 	 * @return The AuthenticationManager object.
 	 */
 	public final function getAuthenticationManager(){
@@ -456,6 +477,7 @@ abstract class Application{
 	
 	/**
 	 * Creates the authentication manager to use for the application and returns it.
+	 * @throws HttpException if no authentication manager is defined.
 	 * @return The AuthenticationManager.
 	 */
 	public function makeAuthenticationManager(){
@@ -509,7 +531,6 @@ abstract class Application{
 	public function getSqlFolder(){
 		return $this->getResourceFolder() . '/sql';
 	}
-	
 	
 	/**
 	 * Method that returns a nice error message formatted with HTML and CSS.
@@ -569,6 +590,7 @@ abstract class Application{
 	
 	/**
 	 * Getting the application's database connection.
+	 * @return The DB object.
 	 */
 	public function getDB(){
 		if($this->db === null){
@@ -581,5 +603,32 @@ abstract class Application{
 			));
 		}
 		return $this->db;
+	}
+	
+	/**
+	 * Adding a line to the user's browsing history.
+	 * @param $line The line to add.
+	 */
+	public function addHistory($line){
+		$history = $this->getSessionVar('history' . $this->name);
+		if($history == null){
+			$history = array();
+		}
+		
+		$history[] = array(
+			'date' => date('Y-m-d H:i:s'),
+			'content' => $line
+		);
+		
+		$this->setSessionVar('history' . $this->name,$history);
+	}
+	
+	/**
+	 * Getting the user's browsing history.
+	 * @return The array representing the history.
+	 */
+	public function getHistory(){
+		$history = $this->getSessionVar('history' . $this->name);
+		return ($history !== null ? $history : array());
 	}
 }
