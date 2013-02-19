@@ -159,6 +159,34 @@ abstract class StatisticsManager{
 	}
 	
 	/**
+	 * Getting the daily stats for the game.
+	 * @return The array of date and games.
+	 */
+	public function getDailyStats(){
+		$repo = $this->getRepository();
+		
+		$qb = new QueryBuilder($repo->getTable(),'t');
+		$qb
+			->select('COUNT(*)','games')
+			->select('DATE(FROM_UNIXTIME(' . $this->getTimestampColumn() . '))','date')
+			->groupBy('DATE(FROM_UNIXTIME(' . $this->getTimestampColumn() . '))')
+			->orderBy('DATE(FROM_UNIXTIME(' . $this->getTimestampColumn() . '))','DESC')
+			->setMaxResults(60);
+			
+		$res = DB::fetch($qb->getQuery());
+		
+		return $res;
+	}
+	
+	/**
+	 * Gets the column corresponding to the timestamp of the date, which
+	 * will be used for the daily statistics.
+	 */
+	public function getTimestampColumn(){
+		return 'date';
+	}
+	
+	/**
 	 * Gets the columns sent by the client
 	 */
 	public abstract function getSentColumns();

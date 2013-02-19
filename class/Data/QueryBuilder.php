@@ -14,6 +14,7 @@ class QueryBuilder extends Query{
 	private $firstResult;
 	private $maxResults;
 	private $links;
+	private $groupBy;
 	
 	/**
 	 * Creates a new Query for the specified table.
@@ -30,6 +31,7 @@ class QueryBuilder extends Query{
 		$this->firstResult = 0;
 		$this->maxResults = null;
 		$this->links = array();
+		$this->groupBy = array();
 		
 		$this->tables = array();
 		if($table !== null){
@@ -157,6 +159,16 @@ class QueryBuilder extends Query{
 	}
 	
 	/**
+	 * Adding a GROUP BY clause
+	 * @param $field The field to group by.
+	 * @return The current QueryBuilder object.
+	 */
+	public function groupBy($field){
+		$this->groupBy[] = $field;
+		return $this;
+	}
+	
+	/**
 	 * Getting the actual SQL query.
 	 * @return The query string.
 	 */
@@ -168,7 +180,7 @@ class QueryBuilder extends Query{
 		$sep = '';
 		foreach($this->tables as $table){
 			if($table['table'] instanceof Query){
-				$query .= $sep . $table['table']->getQuery() . ' AS ' . $table['alias'];
+				$query .= $sep . '(' . $table['table']->getQuery() . ') AS ' . $table['alias'];
 			}else{
 				$query .= $sep . $table['table'] . ' ' . $table['alias'];
 			}
@@ -198,14 +210,21 @@ class QueryBuilder extends Query{
 			$query .= $where;
 		}
 		
-		// ORDER BY clause
-		if(strlen($this->orderBy) > 0){
-			$query .= ' ORDER BY ' . $this->orderBy;
-		}
-		
 		// Links (UNION, MINUS...)
 		foreach($this->links as $link){
 			$query .= ' ' . $link['type'] . ' ' . $link['query']->getQuery();
+		}
+		
+		if(count($this->groupBy) > 0){
+			$query .= ' GROUP BY ';
+			foreach($this->groupBy as $gb){
+				$query .= $gb;
+			}	
+		}
+		
+		// ORDER BY clause
+		if(strlen($this->orderBy) > 0){
+			$query .= ' ORDER BY ' . $this->orderBy;
 		}
 		
 		// LIMIT clause

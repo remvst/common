@@ -167,7 +167,8 @@ abstract class Application{
 				$route = $this->router->getRoute($this->request);
 				
 				// Adding history
-				$this->addHistory($route['controller'] . ':' . $route['action'] . ' (' . $this->request->getRequestedUri() . ')');
+				$location = $route['controller'] . ':' . $route['action'] . ' (' . $this->request->getRequestedUri() . ')';
+				$this->addHistory($location);
 			
 				$controllerType = $this->getNamespace() . '\\Controller\\' . $route['controller'] . 'Controller';
 				$this->controller = new $controllerType($this); 
@@ -183,12 +184,14 @@ abstract class Application{
 				$ex->apply($this->response);
 				$message = $ex->getMessage();
 				$title = 'Error ' . $ex->getErrorCode();
+				$type = 'http-' . $ex->getErrorCode();
 			}else{
 				// For generic exceptions, we don't display the error message,
 				// for security reasons.
 				$this->response->addHeader('HTTP/1.0 500 Server error');
 				$message = 'Server error. Please try again later or contact the server administrator.';
 				$title = 'Application error';
+				$type = 'unknown';
 			}
 			
 			// Adding a contact email
@@ -199,16 +202,20 @@ abstract class Application{
 				$message .= '<br /><br />Exception message: '.$ex->getMessage();
 				
 				$message .= '<h3>Stack trace:</h3>';
-				$message .= $this->printStackTrace($ex->getTrace());
+				$message .= $this->printableStackTrace($ex->getTrace());
 			}
 			
 			// Making a nice HTML error.
 			$htmlError = $this->showError($title,$message);
 			$this->response->setContent($htmlError);
 			
+			if(!isset($location)){
+				$location = 'unspecified';
+			}
+			
 			// Adding a log and a report
-			$this->addLog(get_class($ex).' at action ' . isset($route) && isset($route['action']) ? $route['action'] : '<unknown>' . ' : ' . $ex->getMessage() . ' (file: ' . $ex->getFile() . ', line: ' . $ex->getLine() . ')');
-			$this->reportCrash($ex,isset($route) ? $route['action'] : 'none');
+			$this->addLog(get_class($ex).' at ' . $location . ' : ' . $ex->getMessage() . ' (file: ' . $ex->getFile() . ', line: ' . $ex->getLine() . ')');
+			$this->report($ex,$location,$type);
 		}
 		
 		// Sending the response to the client
@@ -217,8 +224,10 @@ abstract class Application{
 	
 	/**
 	 * Returns the specified execution stack in HTML format.
+	 * @param $stack The stack to trace.
+	 * @return The HTML-formatted stack trace.
 	 */
-	private function printStackTrace($stack){
+	private function printableStackTrace($stack){
 		$res = '<ul>';
 		foreach($stack as $s){
 			$res .= '<li>';
@@ -234,6 +243,8 @@ abstract class Application{
 	
 	/**
 	 * Getting the Request object and its parameters.
+	 * Returns null if the application is not the running one.
+	 * @return The Request object.
 	 */
 	public function getRequest(){
 		return $this->request;
@@ -241,25 +252,29 @@ abstract class Application{
 	
 	/**
 	 * Getting the Response object that will be rendered to the client.
+	 * Returns null if the application is not the running one.
+	 * @return The Response object.
 	 */
 	public function getResponse(){
 		return $this->response;
 	}
 	
 	/**
-	 * Adding an entry to the log file
+	 * Adding an entry to the log file.
+	 * @param $log The log content.
+	 * @throws Exception if unable to write on the log file.
 	 */
 	public function addLog($log){
 		// Writing the log to the file
 		$log = date('Y-m-d H:i:s') . ' : '.$log."\n";
 		if(file_put_contents($this->getLogFilePath(),$log,FILE_APPEND) === false){
-			header('HTTP/1.0 500 Server error');
-			die('Couldn\'t write on the log file.');
+			throw new \Exception('Couldn\'t write on the log file.');
 		}
 	}
 	
 	/**
 	 * Getting the entire log file. Should be used with caution in production though.
+	 * @return The content of the log file.
 	 */
 	public function getLog(){
 		$logFile = $this->getLogFilePath();
@@ -273,6 +288,7 @@ abstract class Application{
 	
 	/**
 	 * Getting the logs file path.
+	 * @return The path.
 	 */
 	private function getLogFilePath(){
 		return LOG_FOLDER.'/'.$this->name.'.txt';
@@ -280,6 +296,8 @@ abstract class Application{
 	
 	/**
 	 * Getting a $_SESSION var
+	 * @param $var The name of the variable.
+	 * @return The content of the variable.
 	 */
 	public function getSessionVar($var){
 		if(!isset($_SESSION[$var]))
@@ -289,7 +307,9 @@ abstract class Application{
 	}
 	
 	/**
-	 * Setting a $_SESSION var
+	 * Setting a $_SESSION var.
+	 * @param $var The name of the variable.
+	 * @param $value The content of the variable.
 	 */
 	public function setSessionVar($var,$value){
 		$_SESSION[$var] = $value;
@@ -297,6 +317,7 @@ abstract class Application{
 	
 	/**
 	 * Getting the application's name.
+	 * @return The name of the application.
 	 */
 	public function getName(){
 		return $this->name;
@@ -306,6 +327,7 @@ abstract class Application{
 	 * Getting the application root directory.
 	 * The application root directory is the path from which it will be 
 	 * executed. Therefore it should be used only for assets.
+	 * @return The path.
 	 */
 	public function getRootDir(){
 		return $this->rootPath;
@@ -334,6 +356,7 @@ abstract class Application{
 	
 	/**
 	 * Getting the host name (without http://)
+	 * @return The host.
 	 */
 	public function getHost(){
 		return $_SERVER['HTTP_HOST'];
@@ -341,6 +364,7 @@ abstract class Application{
 	
 	/**
 	 * Getting the application's configuration.
+	 * @return The IniConfiguration object.
 	 */
 	public function getConfiguration(){
 		return $this->configuration;
@@ -348,6 +372,7 @@ abstract class Application{
 	
 	/**
 	 * Getting the application path on the server.
+	 * @return The path.
 	 */
 	public function getFolder(){
 		return COMMON_ROOT . '/apps/' . $this->name;
@@ -359,20 +384,6 @@ abstract class Application{
 	 */
 	public static function getRunningApplication(){
 		return self::$runningApplication;
-	}
-	
-	/**
-	 * @return Application recap.
-	 */
-	public function getRecap(){
-		throw new \Exception('No recap defined.');
-	}
-	
-	/**
-	 * @return Application charts data.
-	 */
-	public function getCharts(){
-		throw new \Exception('No charts defined.');
 	}
 	
 	/**
@@ -417,8 +428,9 @@ abstract class Application{
 	 * Making a crash report : adds a line to the admin application log.
 	 * @param $ex The exception to log.
 	 * @param $action The action during which the error occured.
+	 * @param $location A parameter specifying the application location (controller, action...)
 	 */
-	protected function reportCrash(\Exception $ex,$action){
+	protected function report(\Exception $ex,$location,$type){
 		// Creating report folder if needed
 		$crashFolder = REPORT_FOLDER;
 		if(!file_exists($crashFolder)){
@@ -427,14 +439,15 @@ abstract class Application{
 		
 		// Creating the report
 		$report = "\n--------------------------------------\n";
+		$report .= 'Date=' . date('Y-m-d H:i:s') . "\n";
 		$report .= 'Application=' . $this->getName() . "\n";
-		$report .= 'Action=' . $action . "\n";
+		$report .= 'Location=' . $location . "\n";
 		$report .= 'Type=' . get_class($ex) . "\n";
 		$report .= 'Message=' . $ex->getMessage() . "\n";
 		
 		$id = $this->getIdentity();
 		
-		$report .= 'Identity=' . $id !== null ? $id->getName() : '<none>' . "\n";
+		$report .= 'Identity=' . ($id !== null ? $id->getName() : '<none>') . "\n";
 		$report .= 'URI=' . $this->request->getRequestedURI() . "\n";
 		$report .= 'Referer=' . (isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '<unknown>') . "\n";
 		$report .= "History=\n";
@@ -446,18 +459,17 @@ abstract class Application{
 		
 		$report .= "\n\n";
 		
-		$report .= "Stack trace:\n";
+		$report .= "Stack trace=\n";
 		foreach($ex->getTrace() as $s){
-			$report .= ' - ';
+			$report .= "\t- ";
 			if(isset($s['class'])){
 				$report .= $s['class'] . '::';
 			}
-			$report .= $s['function'] . '() (' . $s['file'] . ':' . $s['line'] . ')';
-			$report .= "\n";
+			$report .= $s['function'] . '() (' . $s['file'] . ':' . $s['line'] . ")\n";
 		}
 		
 		// Writing it
-		$crashFile = $crashFolder . '/crash-' . time() . '-' . $this->getName();
+		$crashFile = $crashFolder . '/crash-' . time() . '-' . $this->getName() . '-' . $type;
 		file_put_contents($crashFile,$report,FILE_APPEND);
 	}
 	

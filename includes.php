@@ -7,9 +7,17 @@ define('CACHE_FOLDER',COMMON_ROOT.'/cache');
 define('VENDOR_FOLDER',COMMON_ROOT.'/vendor');
 define('REPORT_FOLDER',COMMON_ROOT.'/reports');
 define('LOG_FOLDER',COMMON_ROOT.'/logs');
+define('APP_EXEC_FOLDER',$_SERVER['DOCUMENT_ROOT'] . substr($_SERVER['SCRIPT_NAME'],0,strrpos($_SERVER['SCRIPT_NAME'],'/')));
+
+//echo APP_EXEC_FOLDER . '<br />';
+//echo substr(dirname(__FILE__),0,strrpos(dirname(__FILE__),'/'));
 
 // Displaying errors only if the script is executed locally.
 ini_set('display_errors',ENV_LOCAL);
+
+if(ENV_LOCAL){
+	error_reporting(E_ALL);
+}
 
 // Managing uncaught exceptions.
 set_exception_handler(function(){
@@ -22,9 +30,9 @@ header('Content-Type: text/html; charset=UTF-8');
 /**
  * Initializing an app.
  * Creates an autoloader, then loads the configuration file, 
- * and finally creates the application.
+ * and finally creates and runs the application.
  */
-function init_app($appName){	
+function init_app($appName){
     // Using an autoloader to invoke framework classes.
 	spl_autoload_register(function($class){
 		$classFile = COMMON_ROOT . '/class/' . str_replace('\\','/',substr($class,7)) . '.php';
