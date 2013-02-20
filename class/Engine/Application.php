@@ -36,19 +36,18 @@ abstract class Application{
 	
 	private static $runningApplication = null;
 	
-	private $name;
-	
-	private $configuration;
-	private $router;
-	private $controller;
-	private $response;
-	private $request;
 	private $rootPath;
-	private $instantiated;
-	private $resourceManager;
 	
-	private $identity;
-	private $authManager;
+	protected $name;
+	protected $configuration;
+	protected $router;
+	protected $controller;
+	protected $response;
+	protected $request;
+	protected $instantiated;
+	
+	protected $identity;
+	protected $authManager;
 	
 	protected $twig;
 	protected $db;
@@ -427,10 +426,10 @@ abstract class Application{
 	/**
 	 * Making a crash report : adds a line to the admin application log.
 	 * @param $ex The exception to log.
-	 * @param $action The action during which the error occured.
 	 * @param $location A parameter specifying the application location (controller, action...)
+	 * @param $type The type of report (used for quick display on the admin panel).
 	 */
-	protected function report(\Exception $ex,$location,$type){
+	protected function report(\Exception $ex,$location,$type = 'unknown'){
 		// Creating report folder if needed
 		$crashFolder = REPORT_FOLDER;
 		if(!file_exists($crashFolder)){

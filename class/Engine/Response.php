@@ -41,7 +41,7 @@ class Response{
 			if($bodyPos !== false){
 				try{
 					$route = Application::getRunningApplication()->getRouter()->getRoute(Application::getRunningApplication()->getRequest());
-					$routeStr = $route['controller'] . '->' . $route['action'];
+					$routeStr = (isset($route['name']) ? $route['name'] . ': ' : '') . $route['controller'] . '::' . $route['action'] . 'Action()';
 				}catch(\Exception $e){
 					// Checking the 
 					$routeStr = 'None found';

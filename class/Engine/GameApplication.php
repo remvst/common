@@ -83,6 +83,16 @@ abstract class GameApplication extends Application implements Chartable,Overview
 		return $json_tab;
 	}
 	
+	/**
+	 * Getting the cache manifest. This includes the following
+	 * files and folders :
+	 * - play.html
+	 * - js/
+	 * - img/
+	 * - css/
+	 * - font/
+	 * @return The cache manifest string.
+	 */
 	public function cacheManifest(){
 		$manifest = new \common\Util\CacheManifest();
 		$manifest->addFile(APP_EXEC_FOLDER . '/play.html');
@@ -93,6 +103,6 @@ abstract class GameApplication extends Application implements Chartable,Overview
 		
 		$manifest->addFile('*','NETWORK');
 		
-		return $manifest->render($this->getResponse());
+		return $manifest->render($this->response);
 	}
 }

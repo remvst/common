@@ -46,9 +46,10 @@ abstract class Router{
 		if($this->route === null){
 			$path = substr($request->getRequestedPath(),1);
 			
-			foreach($this->routes as $route){
+			foreach($this->routes as $name=>$route){
 				if($this->checkPathMatch($route,$path)){
 					$this->route = $route;
+					$this->route['name'] = $name; // Adding the name to the route to analyze it later.
 					break;
 				}
 			}

@@ -8,12 +8,14 @@ namespace common\Engine;
  * The controller is composed of several methods with the same kind of name.
  * For example, if you have a home page, you should define the homeAction()
  * in your controller.
+ * Every action returns the result that should be sent to the user.
  */
 abstract class Controller{
-	private $application;
+	protected $application;
 	
 	/**
 	 * Constructor : requires the $application in order to initialize Twig.
+	 * @param $application The application owning this controller.
 	 */
 	public function __construct($application){
 		$this->application = $application;
@@ -116,6 +118,8 @@ abstract class Controller{
 	
 	/**
 	 * Redirecting to another page.
+	 * @param $path The page to redirect to.
+	 * @return Always null.
 	 */
 	public final function redirect($path){        
 		$this->getApplication()->getResponse()->addHeader('Location: ' . $path);
@@ -188,7 +192,7 @@ abstract class Controller{
 	 * the right permissions were matched.
 	 * @return The result of the action.
 	 */
-	public final function perform($action){
+	public function perform($action){
 		$method_name = $action.'Action';
 		if(!method_exists($this,$method_name)){
 			throw new \common\Exception\HttpException(500,'Action ' . $action . ' does not exist.');
