@@ -61,15 +61,6 @@ abstract class Application{
 		$split_name = explode('\\',get_class($this));
 		$this->name = str_replace('Application','',end($split_name));
 		
-		// Configuring autoloader for application-specific classes
-		$appName = $this->name;
-		spl_autoload_register(function($class){
-			$classFile = APPS_FOLDER . '/' . str_replace('\\','/',$class) . '.php';
-			if(file_exists($classFile)){
-				require $classFile;
-			}
-		});
-		
 		// Adding application-specific configuration
 		$this->configuration = $cfg;
 		$this->configuration->fuse(IniConfiguration::buildDirectory($this->getConfigFolder()));
@@ -105,14 +96,14 @@ abstract class Application{
 			// 
 			$this->twig = new \Twig_Environment($loader,$params);
 			
-			// Adding generateUrl() and asset() functions.
-			$app = $this;
+			// Adding generateUrl() and asset() functions, and the truncate filter.
 			$rootPath = $this->rootPath;
-			$this->twig->addFunction(new \Twig_SimpleFunction('generateUrl', function ($route,$params = array()) use($app) {
-				return $app->getRouter()->generateUrl($route,$params);
+			$router = $this->router;
+			$this->twig->addFunction(new \Twig_SimpleFunction('generateUrl', function ($route,$params = array()) use($router) {
+				return $router->generateUrl($route,$params);
 			}));
-			$this->twig->addFunction(new \Twig_SimpleFunction('asset', function ($resource) use($app) {
-				return $app->getRootDir() . '/' . $resource;
+			$this->twig->addFunction(new \Twig_SimpleFunction('asset', function ($resource) use($rootPath) {
+				return $rootPath . '/' . $resource;
 			}));
 			$this->twig->addFilter(new \Twig_SimpleFilter('truncate', function ($str,$length) {
 				if(strlen($str) > $length)
@@ -148,12 +139,9 @@ abstract class Application{
 		$this->rootPath = substr($_SERVER['SCRIPT_NAME'],0,$lastSlash);
 		
 		try{
-			// Creating request and response objets
+			// Creating request and response objects
 			$this->request = new Request($this);
 			$this->response = new Response();
-			
-			// Creating the router
-			$this->router = $this->getRouter();
 			
 			if($this->configuration->getValue('maintenance') === 'yes'){
 				// If the application is currently under maintenance, we
@@ -162,24 +150,26 @@ abstract class Application{
 				$message = empty($cfgMessage) ? 'Application under maintenance.' : $cfgMessage;
 				$this->response->setContent($this->showError('Maintenance',$message));
 			}else{
+				// Creating the router
+				$this->router = $this->getRouter();
+				
 				// Getting the appropriate action for the request
 				$route = $this->router->getRoute($this->request);
 				
 				// Adding history
 				$location = $route['controller'] . ':' . $route['action'] . ' (' . $this->request->getRequestedUri() . ')';
 				$this->addHistory($location);
-			
+				
+				// Creating the controller
 				$controllerType = $this->getNamespace() . '\\Controller\\' . $route['controller'] . 'Controller';
 				$this->controller = new $controllerType($this); 
 				
-				// Executing the action
-				$controllerResult = $this->controller->perform($route['action']);
-				
-				$this->response->setContent($controllerResult);
+				// Executing the action and storing the result into the response object
+				$this->response->setContent($this->controller->perform($route['action']));
 			}
-		}catch(Exception $ex){
-			// Adding headers for HTTP Exceptions
+		}catch(\Exception $ex){
 			if($ex instanceof \common\Exception\HttpException){
+				// Adding headers for HTTP Exceptions
 				$ex->apply($this->response);
 				$message = $ex->getMessage();
 				$title = 'Error ' . $ex->getErrorCode();
@@ -296,7 +286,7 @@ abstract class Application{
 	/**
 	 * Getting a $_SESSION var
 	 * @param $var The name of the variable.
-	 * @return The content of the variable.
+	 * @return The content of the variable, null if undefined.
 	 */
 	public function getSessionVar($var){
 		if(!isset($_SESSION[$var]))
@@ -456,7 +446,13 @@ abstract class Application{
 			$report .= "\t- " . $h['date'] . ' : ' . $h['content'] . "\n";
 		}
 		
-		$report .= "\n\n";
+		$post = $this->request->getParameters('post');
+		$get = $this->request->getParameters('get');
+		
+		if(count($post) > 0)
+			$report .= "POST=\n" . print_r($post,true) . "\n\n";
+		if(count($get) > 0)
+			$report .= "GET=\n" . print_r($get,true) . "\n\n";
 		
 		$report .= "Stack trace=\n";
 		foreach($ex->getTrace() as $s){
@@ -498,6 +494,7 @@ abstract class Application{
 	/**
 	 * Gets the user's identity.
 	 * If there is no authentication manager for the application, null is returned.
+	 * @return The user identity, or null.
 	 */
 	public function getIdentity(){
 		if($this->identity === null){

@@ -4,15 +4,15 @@ namespace common\Data;
 use common\Exception\HttpException as HttpException;
 
 abstract class StatisticsManager{
-	const COL_IP = 1;
-	const COL_TIMESTAMP = 2;
-	const COL_USERAGENT = 3;
-	const COL_LANG = 4;
+	const COL_IP = 'IP';
+	const COL_TIMESTAMP = 'TIMESTAMP';
+	const COL_USERAGENT = 'USERAGENT';
+	const COL_LANG = 'LANG';
 	
 	protected $allowedInterval; // interval between statistics to be sent (seconds)
 	protected $checkDuplicates; // Specifies whether duplicate statistics should be allowed.
-	protected $paramName;
-	protected $statisticsID;
+	protected $paramName; // The name of the parameter which will be sent
+	protected $statisticsID; // Identifies the type of manager (to differentiate session vars)
 	
 	public function __construct(){
 		$this->allowedInterval = 0;
@@ -90,9 +90,9 @@ abstract class StatisticsManager{
 		foreach($columns as $c=>$type){
 			$content = null;
 			switch($type){
-				case self::COL_IP: $content = $_SERVER['REMOTE_ADDR']; break;
+				case self::COL_IP: $content = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : ''; break;
 				case self::COL_TIMESTAMP: $content = time(); break;
-				case self::COL_USERAGENT: $content = $_SERVER['HTTP_USER_AGENT']; break;
+				case self::COL_USERAGENT: $content = isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : ''; break;
 				case self::COL_LANG: $content = isset($_SERVER['HTTP_ACCEPT_LANGUAGE']) ? $_SERVER['HTTP_ACCEPT_LANGUAGE'] : ''; break;
 			}
 			if($content === null){
