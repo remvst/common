@@ -42,20 +42,40 @@ abstract class GameApplication extends Application implements Chartable,Overview
 			)
 		);
 		return $overviews;
-		
-		return array($chart);
 	}
 	
 	public function registerStats(){
+		$params = $this->request->getParameters();
+		if(isset($params['format']) && $params['format'] == 'json'){
+			$format = 'json';
+		}else{
+			$format = 'text';
+		}
+		
 		try{
 			$statsManager = $this->getStatisticsManager();
 			$game = $statsManager->process($this,$this->getRequest());
 			
 			// Getting the rank
 			$rank = $statsManager->getRank($game);
-        	return ('You are now ranked #'.$rank);
+			
+			$res = array(
+				'status' => 'success',
+				'rank' => $rank,
+				'entity' => $game->toArray(),
+				'message' => 'You are ranked #' . $rank
+			);
 		}catch(Exception $e){
-			return 'Error: '.$e->getMessage();
+			$res = array(
+				'status' => 'error',
+				'message' => 'Error: ' . $e->getMessage()
+			);
+		}
+		
+		if($format == 'json'){
+			return json_encode($res);
+		}else{
+			return $res['message'];
 		}
 	}
 	
@@ -85,8 +105,7 @@ abstract class GameApplication extends Application implements Chartable,Overview
 	
 	/**
 	 * Getting the cache manifest. This includes the following
-	 * files and folders :
-	 * - play.html
+	 * and folders :
 	 * - js/
 	 * - img/
 	 * - css/
@@ -95,14 +114,21 @@ abstract class GameApplication extends Application implements Chartable,Overview
 	 */
 	public function cacheManifest(){
 		$manifest = new \common\Util\CacheManifest();
-		$manifest->addFile(APP_EXEC_FOLDER . '/play.html');
 		$manifest->addDirectory(APP_EXEC_FOLDER . '/js');
 		$manifest->addDirectory(APP_EXEC_FOLDER . '/img');
 		$manifest->addDirectory(APP_EXEC_FOLDER . '/css');
 		$manifest->addDirectory(APP_EXEC_FOLDER . '/font');
+		$manifest->addDirectory(APP_EXEC_FOLDER . '/sound');
 		
 		$manifest->addFile('*','NETWORK');
 		
 		return $manifest->render($this->response);
+	}
+	
+	/**
+	 * Overriding errors to disable HTML (useful for popups).
+	 */
+	protected function showError($title,$message){
+		return $title . ': ' . $message;
 	}
 }

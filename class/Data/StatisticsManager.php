@@ -13,12 +13,14 @@ abstract class StatisticsManager{
 	protected $checkDuplicates; // Specifies whether duplicate statistics should be allowed.
 	protected $paramName; // The name of the parameter which will be sent
 	protected $statisticsID; // Identifies the type of manager (to differentiate session vars)
+	protected $allowRawData;
 	
 	public function __construct(){
 		$this->allowedInterval = 0;
 		$this->checkDuplicates = true;
 		$this->paramName = 'params';
 		$this->statisticsID = get_class($this);
+		$this->allowRawData = false;
 	}
 	
 	/**
@@ -45,7 +47,11 @@ abstract class StatisticsManager{
 		}
 		
 		// Decoding the param string
-        $stats = \common\Util\Decoder::decode($params[$this->paramName]);
+		if($this->allowRawData && isset($params['mode']) && $params['mode'] == 'raw'){
+			$stats = urldecode($params[$this->paramName]);
+		}else{
+        	$stats = \common\Util\Decoder::decode($params[$this->paramName]);
+		}
         
 		// Checking if this is the same request as the previous one
         $last_stats = $app->getSessionVar('last_stats_'.$this->statisticsID);
@@ -66,8 +72,14 @@ abstract class StatisticsManager{
             if(!isset($stats[$required_columns[$i]])){
                 $app->getResponse()->addHeader("HTTP/1.0 400 Bad Request");
                 $app->addLog('Incorrect data received : ' . utf8_encode(\common\Util\Decoder::decode($params[$this->paramName]))); 
-                throw new HttpException(400,'Missing ' . $required_columns[$i] . ' (data: ' . \common\Util\Decoder::decode($params[$this->paramName]) . ')');
+                throw new \Exception('Missing ' . $required_columns[$i] . ' (data: ' . \common\Util\Decoder::decode($params[$this->paramName]) . ')');
             }
+        }
+
+        // Applying censorship
+        $censored_columns = $this->getCensoredColumns();
+        foreach($censored_columns as $c){
+        	$stats[$c] = $this->censorString($stats[$c]);
         }
 		
 		// Adding server-generated columns
@@ -143,12 +155,26 @@ abstract class StatisticsManager{
 		
 		$table = $this->getRepository()->getTable();
 		$qb = new QueryBuilder($table,'t');
-		$qb->select('COUNT(*)','nb_inf')
-			->where($sortedColumn . '>=:value')
-			->setParam('value',$ref);
+		$qb->select('COUNT(*)','nb_inf');
+		
+		if($this->getSortOrder() == 'DESC'){
+			$qb->where($sortedColumn . '>=:value');
+		}else{
+			$qb->where($sortedColumn . '<=:value');
+		}
+		$qb->setParam('value',$ref);
+			
+		$this->addGameSpecificWhereClause($qb,$entity);
 		
 		$res = DB::fetch($qb->getQuery());
 		return $res[0]['nb_inf'];
+	}
+	
+	/**
+	 * Adds specific where clause to entities that require it.
+	 */
+	public function addGameSpecificWhereClause($qb,$entity){
+		
 	}
 	
 	/**
@@ -210,4 +236,28 @@ abstract class StatisticsManager{
 	 * Gets the type of object to persist.
 	 */
 	public abstract function getEntityType();
+
+	/**
+	 * Censoring a string
+	 */
+	public function censorString($s){
+		$f = fopen(RESOURCE_FOLDER . '/misc/censorship.txt','r');
+		while($l = trim(fgets($f))){
+			if(!empty($l) && stripos($s,$l) !== false){
+				$stars = $l[0];
+				for($i = 1 ; $i < strlen($l) ; $i++){
+					$stars .= '-';
+				}
+
+				$s = preg_replace('/\b' . $l . '\b/i', $stars, $s);
+			}
+		}
+		fclose($f);
+
+		return $s;
+	}
+
+	protected function getCensoredColumns(){
+		return array();
+	}
 }

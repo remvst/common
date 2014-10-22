@@ -117,6 +117,7 @@ abstract class Application{
 			$this->twig->addGlobal('appUrl','http://' . $this->getHost() . '/' . $this->rootPath);
 			$this->twig->addGlobal('appBase',strlen($this->rootPath) > 1 ? $this->rootPath . '/' : '/');
 			$this->twig->addGlobal('identity',$this->identity);
+			$this->twig->addGlobal('localEnv',ENV_LOCAL);
 		}
 		return $this->twig;
 	}
@@ -135,8 +136,47 @@ abstract class Application{
 		session_start();
 		
 		// Building the root path (client-side)
-		$lastSlash = strrpos($_SERVER['SCRIPT_NAME'],'/');
-		$this->rootPath = substr($_SERVER['SCRIPT_NAME'],0,$lastSlash);
+		$u = isset($_SERVER['REDIRECT_URL']) ? $_SERVER['REDIRECT_URL'] : $_SERVER['SCRIPT_NAME'];
+		$u = $_SERVER['SCRIPT_NAME'];
+		
+		$scriptFolder = substr($_SERVER['SCRIPT_NAME'],0,strrpos($_SERVER['SCRIPT_NAME'],'/'));
+		
+		//echo 'script folder: ' . $scriptFolder . "\n";
+		
+		if(isset($_SERVER['REDIRECT_URL']) && !empty($scriptFolder) && strpos($_SERVER['REDIRECT_URL'],$scriptFolder) === false){
+			$script = $_SERVER['SCRIPT_NAME'];
+			$uri = substr($script,0,strrpos($script,'/'));
+			
+			//echo $uri;
+			
+			$uri = strrev($uri);
+			$redir = strrev($_SERVER['REDIRECT_URL']);
+			
+			//echo ' ' . $_SERVER['REDIRECT_URL'];
+			
+			$common = '';
+			$n = min(strlen($uri),strlen($redir));
+			$i = 0;
+			while($i < $n && $uri[$i] == $redir[$i]){
+				echo $uri[$i] . ' - ' . $redir[$i] . "\n";
+				$i++;
+			}
+			
+			$common = strrev(substr($redir,0,strlen($redir) - $i));
+			//echo 'common: ' . $common . "\n";
+			$u = $common;
+		}
+		
+		//echo $common . "\n";
+		
+		//print_r($_SERVER);
+		
+		
+		$lastSlash = strrpos($u,'/');
+		$this->rootPath = substr($u,0,$lastSlash);
+		
+		//echo 'requested root: ' . $this->rootPath . "\n";
+		//echo $this->rootPath;
 		
 		try{
 			// Creating request and response objects
@@ -203,8 +243,11 @@ abstract class Application{
 			}
 			
 			// Adding a log and a report
+			// TMP disabling report for 404
+			if(!($ex instanceof \common\Exception\HttpException) || $ex->getErrorCode() != 404){
+				$this->report($ex,$location,$type);
+			}
 			$this->addLog(get_class($ex).' at ' . $location . ' : ' . $ex->getMessage() . ' (file: ' . $ex->getFile() . ', line: ' . $ex->getLine() . ')');
-			$this->report($ex,$location,$type);
 		}
 		
 		// Sending the response to the client
@@ -406,7 +449,7 @@ abstract class Application{
 	 */
 	protected function getController($name = null){
 		if($name == null){
-			$name = $this->name;
+			$name = $this->getDefaultController();
 		}
 		
 		$class = str_replace($this->name . 'Application','Controller\\' . $name . 'Controller',get_class($this));
@@ -439,6 +482,7 @@ abstract class Application{
 		$report .= 'Identity=' . ($id !== null ? $id->getName() : '<none>') . "\n";
 		$report .= 'URI=' . $this->request->getRequestedURI() . "\n";
 		$report .= 'Referer=' . (isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : '<unknown>') . "\n";
+		$report .= 'UserAgent=' . (isset($_SERVER['HTTP_USER_AGENT']) ? $_SERVER['HTTP_USER_AGENT'] : '<unknown>') . "\n";
 		$report .= "History=\n";
 		
 		$history = $this->getHistory();
@@ -542,8 +586,11 @@ abstract class Application{
 	
 	/**
 	 * Method that returns a nice error message formatted with HTML and CSS.
+	 * @param $title The error title.
+	 * @param $message The error details.
+	 * @return The output.
 	 */
-	private function showError($title,$message){
+	protected function showError($title,$message){
 		try{
 			$controller = $this->controller !== null ? $this->controller : $this->getController();
 			return $controller->showError($title,$message);
@@ -576,7 +623,7 @@ abstract class Application{
 	 * @return true if debug mode is enabled.
 	 */
 	public function debugMode(){
-		return false;
+		return ENV_LOCAL;
 	}
 	
 	/**
@@ -625,7 +672,8 @@ abstract class Application{
 		
 		$history[] = array(
 			'date' => date('Y-m-d H:i:s'),
-			'content' => $line
+			'content' => $line,
+			'path' => $this->request->getRequestedPath()
 		);
 		
 		$this->setSessionVar('history' . $this->name,$history);

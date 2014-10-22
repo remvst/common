@@ -1,9 +1,6 @@
 <?php
 namespace common\Engine;
 
-use \common\Data\DB as DB;
-use \common\Engine\Application as Application;
-
 /**
  * Class representing the response that will be sent
  * to the client.
@@ -36,11 +33,11 @@ class Response{
 		}
 		
 		// Adding development info
-		if(ENV_LOCAL || Application::getRunningApplication()->debugMode()){
+		if(\common\Engine\Application::getRunningApplication()->debugMode()){
 			$bodyPos = strrpos($this->content,'</body>');
 			if($bodyPos !== false){
 				try{
-					$route = Application::getRunningApplication()->getRouter()->getRoute(Application::getRunningApplication()->getRequest());
+					$route = \common\Engine\Application::getRunningApplication()->getRouter()->getRoute(\common\Engine\Application::getRunningApplication()->getRequest());
 					$routeStr = (isset($route['name']) ? $route['name'] . ': ' : '') . $route['controller'] . '::' . $route['action'] . 'Action()';
 				}catch(\Exception $e){
 					// Checking the 
@@ -54,21 +51,21 @@ class Response{
 					'Request' => Application::getRunningApplication()->getRequest()->getRequestedPath()
 				);
 				
-				$dbConnections = DB::getConnections();
+				$dbConnections = \common\Data\DB::getConnections();
 				$i = 1;
 				foreach($dbConnections as $connection){
 					$infos['DB #'.$i] = count($connection->getQueries()) . ' queries (' . round($connection->getQueryTime(),5) . ' - ' . round(100 * $connection->getQueryTime() / $exec,1) . '%)';
 					++$i;
 				}
 				
-				$id = Application::getRunningApplication()->getIdentity();
+				$id = \common\Engine\Application::getRunningApplication()->getIdentity();
 				if(is_object($id)){
 					$infos['Identity'] = $id->getName() . ' (' . implode(',',$id->getPermissionsArray()) . ')';
 				}else{
 					$infos['Identity'] = 'none';
 				}
 				
-				$toolbar = '<br /><br /><div style="position:fixed;width:100%;border-top:1px solid gray;bottom:0px;left:0px;background-color: silver; box-shadow: 0px 0px 10px silver; ">';
+				$toolbar = '<br /><br /><div ontouchstart="this.style.display=\'none\'" onclick="this.style.display=\'none\'" style="position:fixed;width:100%;border-top:1px solid gray;bottom:0px;left:0px;background-color: silver; box-shadow: 0px 0px 10px black; ">';
 				foreach($infos as $info=>$value){
 					$toolbar .= '<span style="height: 20px; overflow: auto; padding:5px;display:block;float:left;width:200px;border-right:1px solid gray;font-size:0.8em;">' . $info . ': ' . $value . '</span>';
 				}

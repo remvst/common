@@ -46,8 +46,8 @@ class IniConfiguration{
 	 * @param $key The parameter name.
 	 * @return The parameter if set, null otherwise.
 	 */
-	public function getValue($key){
-		return isset($this->values[$key]) ? $this->values[$key] : null;
+	public function getValue($key,$default = null){
+		return isset($this->values[$key]) ? $this->values[$key] : $default;
 	}
 	
 	/**

@@ -46,19 +46,24 @@ abstract class Router{
 		if($this->route === null){
 			$path = substr($request->getRequestedPath(),1);
 			
-			foreach($this->routes as $name=>$route){
-				if($this->checkPathMatch($route,$path)){
-					$this->route = $route;
-					$this->route['name'] = $name; // Adding the name to the route to analyze it later.
-					break;
-				}
-			}
+			$this->route = $this->getRouteForPath($path);
 			
 			if($this->route === null){
-				throw new \common\Exception\HttpException(404,'Page not found.');
+				$this->application->addLog('No route for ' . $request->getRequestedURI());
+				throw new \common\Exception\HttpException(404,'Page not found (request: ' . $request->getRequestedURI() . ').');
 			}
 		}
 		return $this->route;
+	}
+	
+	public function getRouteForPath($path){
+		foreach($this->routes as $name=>$route){
+			if($this->checkPathMatch($route,$path)){
+				$route['name'] = $name;
+				return $route;
+			}
+		}
+		return null;
 	}
 	
 	/**

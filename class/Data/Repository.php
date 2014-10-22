@@ -53,7 +53,7 @@ abstract class Repository{
 	 * Allowing findByX methods.
 	 */
 	public function __call($method_name,$method_params){
-		if(strpos($method_name,'findBy') == 0){
+		if(strpos($method_name,'findBy') === 0){
 			$col = strtolower(str_replace('findBy','',$method_name));
 			
 			$columns = $this->getColumns();
@@ -97,7 +97,11 @@ abstract class Repository{
 				if($i > 0)	$qb->andWhere();
 				
 				// Adding the condition, using a parameter.
-				$qb->where($this->formatColumn($col,'t').'=:param'.$i);
+				if(is_array($value)){
+					$qb->where($this->formatColumn($col,'t').' IN :param'.$i);
+				}else{
+					$qb->where($this->formatColumn($col,'t').'=:param'.$i);
+				}
 				++$i;
 			}
 			
@@ -171,7 +175,7 @@ abstract class Repository{
         }else{
         	$qb = new UpdateQueryBuilder($this->getTable());
 			
-			// If the query is an update, we have to had a WHERE clause.
+			// If the query is an update, we have to add a WHERE clause.
 			foreach($this->getKey() as $key){
                 $getter = 'get'.ucwords($key);
                 
@@ -186,7 +190,7 @@ abstract class Repository{
 			$value = $entity->$getter();
 			
 			// Adding the attribute to the query only if not null.
-			if($value != null){
+			if($value !== null){
         		$qb->addColumn($sqlCol,':valueparam'.$objCol);
 				$qb->setParam('valueparam' . $objCol,$entity->$getter());
 			}
@@ -203,7 +207,21 @@ abstract class Repository{
         }else{
         	return false;
         }
-	} 
+	}
+	
+	public function delete($entity){
+		$qb = new DeleteQueryBuilder($this->getTable());
+		
+		$entityColumns = $this->getColumns();
+		foreach($this->getKey() as $key){
+			$getter = 'get'.ucwords($key);
+			
+			$qb->where($entityColumns[$key] . '=:whereparam' . $key);
+			$qb->setParam('whereparam' . $key,$entity->$getter());
+		}
+		
+		return ($this->db->execute($qb->getQuery()) == 1);
+	}
 	
 	/**
 	 * Commits the current transaction.

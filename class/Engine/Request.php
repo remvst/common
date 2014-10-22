@@ -15,6 +15,8 @@ class Request{
 	private $requestedFile;
 	private $requestedFiletype;
 	private $requestedPath;
+	private $userAgentString;
+	private $referer;
 	
 	/**
 	 * Building a new Request object.
@@ -23,7 +25,14 @@ class Request{
 	public function __construct($app){
 		$this->params = null;
 		
-		$this->requestedURI = $app->getPathFromRootDir(urldecode($_SERVER['REQUEST_URI']));
+		$this->userAgentString = $_SERVER['HTTP_USER_AGENT'];
+		$this->referer = isset($_SERVER['HTTP_REFERER']) ? $_SERVER['HTTP_REFERER'] : null;
+		
+		$this->requestedURI = $app->getPathFromRootDir(urldecode(isset($_SERVER['REDIRECT_URL']) ? $_SERVER['REDIRECT_URL'] : $_SERVER['REQUEST_URI']));
+		
+		//echo $app->getRootDir() . '<br />';
+		//print_r($_SERVER);
+		//echo 'request: ' . $this->requestedURI . "\n";//*/
 		
 		$split = explode('?',$this->requestedURI);
 		$this->requestedPath = $split[0];
@@ -33,6 +42,18 @@ class Request{
 		
 		$split_extension = explode('.',$this->requestedFile);
 		$this->requestedFiletype = end($split_extension);
+	}
+	
+	public function getUserAgentString(){
+		return $this->userAgentString;
+	}
+	
+	/**
+	 * 
+	 */
+	public function getParameter($name,$default = null){
+		$params = $this->getParameters();
+		return isset($params[$name]) ? $params[$name] : $default;
 	}
 	
 	/**
@@ -89,5 +110,9 @@ class Request{
 	 */
 	public function getRequestedPath(){
 		return $this->requestedPath;
+	}
+	
+	public function getReferer(){
+		return $this->referer;
 	}
 }

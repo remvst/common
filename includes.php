@@ -1,13 +1,16 @@
 <?php
 // Defining a series of constants for the whole framework.
-define('ENV_LOCAL',(in_array($_SERVER['REMOTE_ADDR'],array('127.0.0.1','::1')) || $_SERVER['REMOTE_ADDR'] == '::1'));
+define('ENV_LOCAL',in_array($_SERVER['REMOTE_ADDR'],array('127.0.0.1','::1')) || strpos($_SERVER['REMOTE_ADDR'],'192.168.') === 0 || strpos($_SERVER['REMOTE_ADDR'],'10.11.') === 0);
 define('COMMON_ROOT',dirname(__FILE__));
 define('APPS_FOLDER',COMMON_ROOT.'/apps');
 define('CACHE_FOLDER',COMMON_ROOT.'/cache');
 define('VENDOR_FOLDER',COMMON_ROOT.'/vendor');
 define('REPORT_FOLDER',COMMON_ROOT.'/reports');
 define('LOG_FOLDER',COMMON_ROOT.'/logs');
+define('RESOURCE_FOLDER',COMMON_ROOT.'/Resource');
 define('APP_EXEC_FOLDER',$_SERVER['DOCUMENT_ROOT'] . substr($_SERVER['SCRIPT_NAME'],0,strrpos($_SERVER['SCRIPT_NAME'],'/')));
+
+date_default_timezone_set('UTC');
 
 // Displaying errors only if the script is executed locally.
 ini_set('display_errors',ENV_LOCAL);
@@ -54,7 +57,7 @@ function init_app($appName){
 		require dirname(__FILE__) . '/apps/'.$appName.'/'.$appName.'Application.php';
 	
         // Getting common configuration
-        $cfg = common\Engine\IniConfiguration::buildDirectory(dirname(__FILE__) . '/config');
+        $cfg = common\Engine\IniConfiguration::buildDirectory(RESOURCE_FOLDER . '/config');
     
 		// Creating the application
 		$class = $appName.'\\' . $appName . 'Application';

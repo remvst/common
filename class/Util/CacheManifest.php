@@ -2,17 +2,23 @@
 namespace common\Util;
 
 class CacheManifest{
+	//~ const CONSTANT = 'constant value';
+	//~ const MAX_SIZE = ; //(5 * 1024 * 1024 * 1024);
+	
 	private $modified;
 	private $files;
 	private $extensions;
 	private $root;
+	private $filesPerSize;
+	private $maxSize;
 	
 	public function __construct(){
 		$this->modified = 0;
 		$this->extensions = array(
 			'js','html','css',
 			'png','jpg','jpeg',
-			'ttf'
+			'ttf','otf',
+			'ogg','mp3','wav'
 		);
 		$this->files = array(
 			'CACHE' => array(),
@@ -20,7 +26,19 @@ class CacheManifest{
 			'FALLBACK' => array()
 		);
 		$this->root = '';
+		$this->filesPerSize = array();
+		$this->maxSize = 5 * 1024 * 1024;
 	}
+	
+	public function setMaxSize($maxSize){
+		$this->maxSize = $maxSize;
+	}
+
+	public function getMaxSize(){
+		return $this->maxSize;
+	}
+
+
 	
 	/**
 	 * Adding the specified file.
@@ -32,12 +50,23 @@ class CacheManifest{
 		
 		// Checking if the extensions is enabled
 		if($file == '*' || in_array($ext, $this->extensions)){
-			$this->files[$type][] = $file;
+			$add = array(
+				'path' => $file
+			);
 			
 			// Modification
 			if(file_exists($file)){
-				$modified = filemtime($file);
-				$this->modified = max($this->modified,$modified);
+				$add['modified'] = filemtime($file);
+				$add['size'] = filesize($file);
+				$this->modified = max($this->modified,$add['modified']);
+				
+				$i = 0;
+				while($i < count($this->files[$type]) && $add['size'] > $this->files[$type][$i]['size']){
+					$i++;
+				}
+				array_splice($this->files[$type],$i,0,array($add));
+			}else{
+				$this->files[$type][] = $add;
 			}
 		}
 	}
@@ -55,18 +84,39 @@ class CacheManifest{
 	 * @param $dir The directory path.
 	 */
 	public function addDirectory($dir){
-		$d = opendir($dir);
-		while($f = readdir($d)){
-			$path = $dir . '/' . $f;
-			if($f != '.' && $f != '..'){
-				if(is_dir($path)){
-					$this->addDirectory($path);
-				}else{
-					$this->addFile($path);
-				}
+	    if(file_exists($dir)){
+    		$d = opendir($dir);
+    		while($f = readdir($d)){
+    			$path = $dir . '/' . $f;
+    			if($f != '.' && $f != '..'){
+    				if(is_dir($path)){
+    					$this->addDirectory($path);
+    				}else{
+    					$this->addFile($path);
+    				}
+    			}
+    		}
+    		closedir($d);
+        }
+	}
+	
+	public function removeBigFiles($files,$maxSize){
+		$res = array();
+		
+		$totalSize = 0;
+		$i = 0;
+		while($totalSize < $maxSize && $i < count($files)){
+			if(isset($files[$i]['size'])){
+				$totalSize += $files[$i]['size'];
 			}
+			$i++;
 		}
-		closedir($d);
+		
+		//~ echo 'Limited to ' . $totalSize / (1024 * 1024) . ' - ' . ($i-1) . '/' . count($files);
+		
+		$res = array_slice($files,0,$i-1);
+		
+		return $res;
 	}
 	
 	/**
@@ -74,24 +124,30 @@ class CacheManifest{
 	 * @param $reponse The reponse to apply the content-type header to.
 	 */
 	public function render($response = null){
+		$this->files['CACHE'] = $this->removeBigFiles($this->files['CACHE'],$this->maxSize);
+		//~ print_r($this->files);
+		//~ $this->files['CACHE'] = $this->removeBigFiles($this->files['CACHE'],5*1024*1024);
+		
 		if($response !== null){
 			$response->addHeader('Content-type: text/cache-manifest');
 		}
 		
 		$s = "CACHE MANIFEST\n\n";
-		$s .= "# Automatically generated\n";
+		$s .= "# Automatically generated manifest\n";
 		$s .= '# Last modified  ' . date('Y-m-d H:i:s',$this->modified) . "\n";
-		foreach(array('CACHE','NETWORK','FALLBACK') as $type){
-			if(count($this->files[$type]) > 0){
+		foreach($this->files as $type=>$files){
+			if(count($files) > 0){
 				$s .= "\n" . $type . ":\n";
 				
-				foreach($this->files[$type] as $f){
+				foreach($files as $f){
+					$path = $f['path'];
+					
 					// Removing the document root
-					if(strpos($f,$_SERVER['DOCUMENT_ROOT']) === 0){
-						$f = substr($f,strlen($_SERVER['DOCUMENT_ROOT']));
+					if(strpos($path,$_SERVER['DOCUMENT_ROOT']) === 0){
+						$path = substr($path,strlen($_SERVER['DOCUMENT_ROOT']));
 					}
 					
-					$s .= $f . "\n";
+					$s .= $path . "\n";
 				}
 			}
 		}

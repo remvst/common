@@ -35,6 +35,9 @@ class InsertQueryBuilder extends Query{
 			if($value instanceof Query)
 				$value = $value->getQuery();
 			
+			// Issue with backslashes
+			$value = str_replace('\\','\\\\',$value);
+			
 			// Here is a bit tricky part for 
 			$sql = preg_replace('#:'.$param.'([^a-zA-Z0-9]|$)#',$value.'$1',$sql);
 		}
@@ -55,6 +58,7 @@ class InsertQueryBuilder extends Query{
 		if(is_string($value)){
 			$value = $this->quote($value);
 		}
+		
 		return parent::setParam($name,$value);
 	}
 }

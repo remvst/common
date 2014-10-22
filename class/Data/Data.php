@@ -45,6 +45,7 @@ class Data{
     public function hydrate($hydratation){
         foreach($hydratation as $attr=>$value){
             $function = 'set'.ucwords($attr);
+			//echo $function . "(" . $value . ")\n";
             if(method_exists($this, $function)){
                 $this->$function($value);
             }
@@ -56,5 +57,18 @@ class Data{
      */
     public function isNew(){
     	return !$this->exists;
+    }
+
+    public function toArray(){
+        $methods = preg_grep('#^get#',get_class_methods(get_class($this)));
+
+        $obj = array();
+        foreach($methods as $m){
+            $field = str_replace('get','',$m);
+            $field[0] = strtolower($field[0]);
+            $obj[$field] = $this->$m();
+        }
+
+        return $obj;
     }
 }

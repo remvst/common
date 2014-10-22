@@ -200,8 +200,11 @@ class QueryBuilder extends Query{
 				if($value === null){
 					throw new \common\Exception\DatabaseException('Parameter ' . $param . ' has no value.');
 				}else if($value instanceof Query){
-					$value = $value->getQuery();
+					$value = '(' . $value->getQuery() . ')';
 				}
+				
+				// Issue with backslashes
+				$value = str_replace('\\','\\\\',$value);
 				
 				//$where = str_replace(':'.$param,$value,$where);
 				$where = preg_replace('#:'.$param.'([^a-zA-Z0-9]|$)#',$value.'$1',$where);
@@ -216,10 +219,7 @@ class QueryBuilder extends Query{
 		}
 		
 		if(count($this->groupBy) > 0){
-			$query .= ' GROUP BY ';
-			foreach($this->groupBy as $gb){
-				$query .= $gb;
-			}	
+			$query .= ' GROUP BY ' . implode(',',$this->groupBy);
 		}
 		
 		// ORDER BY clause
@@ -253,6 +253,15 @@ class QueryBuilder extends Query{
 		// Query object), we quote it.
 		if(is_string($value)){
 			$value = $this->quote($value);
+		}else if(is_array($value)){
+			$s = '';
+			for($i = 0 ; $i < count($value) ; $i++){
+				if($i > 0){
+					$s .= ',';
+				}
+				$s .= $this->quote($value[$i]);
+			}
+			$value = '('.$s.')';
 		}
 		return parent::setParam($name,$value);
 	}

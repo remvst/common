@@ -24,6 +24,11 @@ Here are some features that are supported:
 The whole framework is highly inspired by Symfony, while staying a lot 
 simpler and less powerful.
 
+Some of the game-oriented features:
+
+* leaderboards support
+* automatic cache manifest
+
 Live examples
 ======
 

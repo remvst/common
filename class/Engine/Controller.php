@@ -121,7 +121,10 @@ abstract class Controller{
 	 * @param $path The page to redirect to.
 	 * @return Always null.
 	 */
-	public final function redirect($path){        
+	public final function redirect($path,$isPermanent = false){
+		if($isPermanent){
+			$this->getApplication()->getResponse()->addHeader('HTTP/1.1 301 Moved Permanently');
+		}
 		$this->getApplication()->getResponse()->addHeader('Location: ' . $path);
 		return null;
 	}
@@ -147,14 +150,15 @@ abstract class Controller{
 		}else{			
 			$authManager = $this->application->getAuthenticationManager();
 			$authManager->unauthenticate();
-			return $this->getAuthenticationRedirectAction('logout');
+			return $this->previous();
 		}
 	}
 	
 	/**
 	 * Authenticating the user.
+	 * @param $action The previous action which was supposed to be performed.
 	 */
-	public function authenticateAction(){
+	public function authenticateAction($action = null){
 		// Checking if the user is already authenticated.
 		$identity = $this->application->getIdentity();
 		if($identity !== null && !$identity->isDefaultIdentity()){
@@ -169,14 +173,20 @@ abstract class Controller{
 			try{
 				$authManager = $this->application->getAuthenticationManager();
 				$authManager->tryAuthenticate($params['name'],$params['password']);
-				return $this->getAuthenticationRedirectAction('login');
+				
+				return $this->previous();
+				
 			}catch(\common\Exception\AuthenticationException $e){
-				throw new \common\Exception\HttpException(500,'Authentication failed.');
+				throw new \common\Exception\HttpException(400,'Authentication failed.');
 			}
 		}else{
 			// Displaying the form. Has to be defined for the application.
-			return $this->render('login.html.twig');
+			return $this->loginFormAction();
 		}
+	}
+	
+	public function loginFormAction(){
+		return $this->render('login.html.twig');
 	}
 	
 	/**
@@ -208,7 +218,7 @@ abstract class Controller{
 			if(!$authManager->checkPermissions($identity,$perms)){
 				if($identity === null || $identity->isDefaultIdentity()){
 					// If the user is not logged in, we allow him to log in.
-					return $this->authenticateAction();
+					return $this->authenticateAction($action);
 				}else{
 					throw new \common\Exception\AuthenticationException('You lack permissions for this page.');
 				}
@@ -256,5 +266,24 @@ abstract class Controller{
 				</body>
 			</html>
 		';
+	}
+	
+	/**
+	 * Redirecting to the same page.
+	 */
+	public function reload(){
+		return $this->redirect($this->getApplication()->getRootDir() . '/' . $this->getApplication()->getRequest()->getRequestedUri());
+	}
+	
+	/**
+	 * Redirecting to the previous action, according to the browsing history.
+	 */
+	public function previous(){
+		$history = $this->application->getHistory();
+		if(count($history) >= 2){
+			return $this->redirect($this->getApplication()->getRootDir() . $history[count($history) - 2]['path']);
+		}else{
+			return $this->redirect($this->getApplication()->getRootDir());
+		} 
 	}
 }
