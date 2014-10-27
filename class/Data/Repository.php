@@ -63,18 +63,8 @@ abstract class Repository{
 			return $this->find(null,array($col=>$method_params[0]));
 		}
 	}
-	
-	/**
-	 * Finding data from the repository.
-	 * The $where parameters specifies AND conditions.
-	 * @param $columns The columns to retrieve.
-	 * @param $where The where clauses (will be linked by AND)
-	 * @param $orderBy The ways to order by.
-	 * @param $firstResult The offset.
-	 * @param $maxResults The maximum number of results to retrieve.
-	 * @return The results.
-	 */
-	public function find($columns = null,$where = null,$orderBy = null,$firstResult = 0,$maxResults = null){
+
+	public function generateQueryBuilder($columns = null,$where = null,$orderBy = null,$firstResult = 0,$maxResults = null){
 		$entityColumns = $this->getColumns();
 		
 		$qb = new QueryBuilder($this->getTable(),'t');
@@ -123,8 +113,12 @@ abstract class Repository{
 		// Setting the LIMIT clause.
 		$qb->setFirstResult($firstResult);
 		$qb->setMaxResults($maxResults);
-		
-		$res = $this->db->fetchResults($qb->getQuery());
+
+		return $qb;
+	}
+
+	public function executeQuery($q){
+		$res = $this->db->fetchResults($q);
             
         // Finally, creating objects with the actual type
         $objects = array();
@@ -133,6 +127,22 @@ abstract class Repository{
             $objects[] = $obj;                
         }
         return $objects;
+	}
+	
+	/**
+	 * Finding data from the repository.
+	 * The $where parameters specifies AND conditions.
+	 * @param $columns The columns to retrieve.
+	 * @param $where The where clauses (will be linked by AND)
+	 * @param $orderBy The ways to order by.
+	 * @param $firstResult The offset.
+	 * @param $maxResults The maximum number of results to retrieve.
+	 * @return The results.
+	 */
+	public function find($columns = null,$where = null,$orderBy = null,$firstResult = 0,$maxResults = null){
+		$qb = $this->generateQueryBuilder($columns,$where,$orderBy,$firstResult,$maxResults);
+		
+		return $this->executeQuery($qb->getQuery());
 	}
 	
 	/**

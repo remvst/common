@@ -6,3 +6,4 @@ logs
 reports
 swiftmailer
 apps/Portfolio
+vendor/

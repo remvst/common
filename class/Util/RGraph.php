@@ -46,7 +46,26 @@ class RGraph{
 		
 		// Adding default requirements
 		$this->requires('common.core');
+		$this->requires('common.dynamic');
 		$this->requires(strtolower($this->type));
+
+		$this->requires('common.annotate');
+		$this->requires('common.context');
+		$this->requires('common.effects');
+		$this->requires('common.key');
+		$this->requires('common.resizing');
+		$this->requires('common.tooltips');
+		$this->requires('common.zoom');
+
+		$this->requires('drawing.rect');
+		$this->requires('drawing.circle');
+		$this->requires('drawing.image');
+		$this->requires('drawing.marker1');
+		$this->requires('drawing.marker2');
+		$this->requires('drawing.poly');
+		$this->requires('drawing.text');
+		$this->requires('drawing.xaxis');
+		$this->requires('drawing.yaxis');
 	}
 	
 	/**
@@ -115,6 +134,10 @@ class RGraph{
 	 */
 	public function render(){
 		$s = "<canvas id='chart-" . $this->id . "' width='" . $this->width . "' height='" . $this->height . "'></canvas>\n\n";
+		
+		if($this->id == 1){
+			$s .= '<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>';
+		}
 		
 		foreach($this->required as $r){
 			if(!in_array($r,self::$included)){

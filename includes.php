@@ -31,21 +31,19 @@ header('Content-Type: text/html; charset=UTF-8');
  * Creates an autoloader, then loads the configuration file, 
  * and finally creates and runs the application.
  */
-function init_app($appName){
-    // Using an autoloader to invoke framework classes (and app-specific classes).
-	spl_autoload_register(function($class){
+function init_app($appName,$sourceFolder = APPS_FOLDER){
+    // Using an autoloader to invoke framework classes
+	spl_autoload_register(function($class) use($sourceFolder){
 		// Framework classes
 		$classFile = COMMON_ROOT . '/' . str_replace(array('\\','common/'),array('/','class/'),$class) . '.php';
 		if(file_exists($classFile)){
 			require $classFile;
-			return;
 		}
 		
 		// App-specific classes
 		$classFile = APPS_FOLDER . '/' . str_replace('\\','/',$class) . '.php';
 		if(file_exists($classFile)){
 			require $classFile;
-			return;	
 		}
 	});
 		
@@ -54,7 +52,7 @@ function init_app($appName){
 		require 'vendor/autoload.php';
 		
 		// Getting application class
-		require dirname(__FILE__) . '/apps/'.$appName.'/'.$appName.'Application.php';
+		require $sourceFolder . '/'.$appName.'/'.$appName.'Application.php';
 	
         // Getting common configuration
         $cfg = common\Engine\IniConfiguration::buildDirectory(RESOURCE_FOLDER . '/config');
