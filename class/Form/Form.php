@@ -157,7 +157,7 @@ class Form{
 				$size = '';
 				$size .= isset($this->fields[$fieldId]['cols']) ? ' cols="' . $this->fields[$fieldId]['cols'] . '"' : '';
 				$size .= isset($this->fields[$fieldId]['rows']) ? ' rows="' . $this->fields[$fieldId]['rows'] . '"' : '';
-				return '<textarea ' . $size . ' id="' . $this->getUniqueFieldId($fieldId) . '" name="' . $this->getUniqueFieldId($fieldId) . '">' . $this->fields[$fieldId]['value'] . '</textarea>';
+				return '<textarea ' . $size . ' id="' . $this->getUniqueFieldId($fieldId) . '" name="' . $this->getUniqueFieldId($fieldId) . '">' . htmlspecialchars($this->fields[$fieldId]['value']) . '</textarea>';
 				break;
 			case 'checkbox':
 				return '<input type="' . $this->fields[$fieldId]['type'] . '" id="' . $this->getUniqueFieldId($fieldId) . '" name="' . $this->getUniqueFieldId($fieldId) . '" value="1" ' . ($this->fields[$fieldId]['value'] ? 'checked="checked"' : '') . ' />';
