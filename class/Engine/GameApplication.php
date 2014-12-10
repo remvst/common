@@ -113,12 +113,14 @@ abstract class GameApplication extends Application implements Chartable,Overview
 	 * @return The cache manifest string.
 	 */
 	public function cacheManifest(){
-		$manifest = new \common\Util\CacheManifest();
-		$manifest->addDirectory(APP_EXEC_FOLDER . '/js');
-		$manifest->addDirectory(APP_EXEC_FOLDER . '/img');
-		$manifest->addDirectory(APP_EXEC_FOLDER . '/css');
-		$manifest->addDirectory(APP_EXEC_FOLDER . '/font');
-		$manifest->addDirectory(APP_EXEC_FOLDER . '/sound');
+		$public = $this->getResourceFolder() . '/public';
+
+		$manifest = new \common\Util\CacheManifest($public);
+		$manifest->addDirectory('js');
+		$manifest->addDirectory('img');
+		$manifest->addDirectory('css');
+		$manifest->addDirectory('font');
+		$manifest->addDirectory('sound');
 		
 		$manifest->addFile('*','NETWORK');
 		

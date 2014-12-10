@@ -11,9 +11,11 @@ class CacheManifest{
 	private $root;
 	private $filesPerSize;
 	private $maxSize;
+	private $base;
 	
-	public function __construct(){
+	public function __construct($base = '.'){
 		$this->modified = 0;
+		$this->base = $base;
 		$this->extensions = array(
 			'js','html','css',
 			'png','jpg','jpeg',
@@ -55,9 +57,9 @@ class CacheManifest{
 			);
 			
 			// Modification
-			if(file_exists($file)){
-				$add['modified'] = filemtime($file);
-				$add['size'] = filesize($file);
+			if(file_exists($this->base . '/' . $file)){
+				$add['modified'] = filemtime($this->base . '/' . $file);
+				$add['size'] = filesize($this->base . '/' . $file);
 				$this->modified = max($this->modified,$add['modified']);
 				
 				$i = 0;
@@ -84,12 +86,12 @@ class CacheManifest{
 	 * @param $dir The directory path.
 	 */
 	public function addDirectory($dir){
-	    if(file_exists($dir)){
-    		$d = opendir($dir);
+	    if(file_exists($this->base . '/' . $dir)){
+    		$d = opendir($this->base . '/' . $dir);
     		while($f = readdir($d)){
     			$path = $dir . '/' . $f;
     			if($f != '.' && $f != '..'){
-    				if(is_dir($path)){
+    				if(is_dir($this->base . '/' . $path)){
     					$this->addDirectory($path);
     				}else{
     					$this->addFile($path);
@@ -141,7 +143,7 @@ class CacheManifest{
 				
 				foreach($files as $f){
 					$path = $f['path'];
-					
+
 					// Removing the document root
 					if(strpos($path,$_SERVER['DOCUMENT_ROOT']) === 0){
 						$path = substr($path,strlen($_SERVER['DOCUMENT_ROOT']));
