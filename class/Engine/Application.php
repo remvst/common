@@ -141,18 +141,12 @@ abstract class Application{
 		
 		$scriptFolder = substr($_SERVER['SCRIPT_NAME'],0,strrpos($_SERVER['SCRIPT_NAME'],'/'));
 		
-		//echo 'script folder: ' . $scriptFolder . "\n";
-		
 		if(isset($_SERVER['REDIRECT_URL']) && !empty($scriptFolder) && strpos($_SERVER['REDIRECT_URL'],$scriptFolder) === false){
 			$script = $_SERVER['SCRIPT_NAME'];
 			$uri = substr($script,0,strrpos($script,'/'));
 			
-			//echo $uri;
-			
 			$uri = strrev($uri);
 			$redir = strrev($_SERVER['REDIRECT_URL']);
-			
-			//echo ' ' . $_SERVER['REDIRECT_URL'];
 			
 			$common = '';
 			$n = min(strlen($uri),strlen($redir));
@@ -163,20 +157,11 @@ abstract class Application{
 			}
 			
 			$common = strrev(substr($redir,0,strlen($redir) - $i));
-			//echo 'common: ' . $common . "\n";
 			$u = $common;
 		}
 		
-		//echo $common . "\n";
-		
-		//print_r($_SERVER);
-		
-		
 		$lastSlash = strrpos($u,'/');
 		$this->rootPath = substr($u,0,$lastSlash);
-		
-		//echo 'requested root: ' . $this->rootPath . "\n";
-		//echo $this->rootPath;
 		
 		try{
 			// Creating request and response objects
@@ -299,9 +284,9 @@ abstract class Application{
 	public function addLog($log){
 		// Writing the log to the file
 		$log = date('Y-m-d H:i:s') . ' : '.$log."\n";
-		if(file_put_contents($this->getLogFilePath(),$log,FILE_APPEND) === false){
-			throw new \Exception('Couldn\'t write on the log file.');
-		}
+		// if(file_put_contents($this->getLogFilePath(),$log,FILE_APPEND) === false){
+		// 	throw new \Exception('Couldn\'t write on the log file.');
+		// }
 	}
 	
 	/**
@@ -509,7 +494,7 @@ abstract class Application{
 		
 		// Writing it
 		$crashFile = $crashFolder . '/crash-' . time() . '-' . $this->getName() . '-' . $type;
-		file_put_contents($crashFile,$report,FILE_APPEND);
+		// file_put_contents($crashFile,$report,FILE_APPEND);
 	}
 	
 	/**
